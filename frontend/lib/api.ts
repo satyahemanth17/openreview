@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+const BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
 
 const api = axios.create({ baseURL: BASE });
 
@@ -67,21 +67,21 @@ export interface GithubFile {
   patch?: string;
 }
 
-export const getReviews = () => api.get<Review[]>('/api/reviews').then((r) => r.data);
-export const getReview = (id: string) => api.get<Review>(`/api/reviews/${id}`).then((r) => r.data);
+export const getReviews = () => api.get<Review[]>('/reviews').then((r) => r.data);
+export const getReview = (id: string) => api.get<Review>(`/reviews/${id}`).then((r) => r.data);
 export const createReview = (data: { title: string; files: ReviewFile[] }) =>
-  api.post<Review>('/api/reviews', data).then((r) => r.data);
+  api.post<Review>('/reviews', data).then((r) => r.data);
 export const getComments = (reviewId: string) =>
-  api.get<Comment[]>(`/api/comments/review/${reviewId}`).then((r) => r.data);
+  api.get<Comment[]>(`/comments/review/${reviewId}`).then((r) => r.data);
 export const createComment = (reviewId: string, data: { filename?: string; line?: number; body: string }) =>
-  api.post<Comment>(`/api/comments/review/${reviewId}`, data).then((r) => r.data);
+  api.post<Comment>(`/comments/review/${reviewId}`, data).then((r) => r.data);
 export const resolveComment = (commentId: string) =>
-  api.put<Comment>(`/api/comments/${commentId}/resolve`).then((r) => r.data);
+  api.put<Comment>(`/comments/${commentId}/resolve`).then((r) => r.data);
 export const addReply = (commentId: string, body: string) =>
-  api.post<Comment>(`/api/comments/${commentId}/reply`, { body }).then((r) => r.data);
+  api.post<Comment>(`/comments/${commentId}/reply`, { body }).then((r) => r.data);
 export const addReaction = (commentId: string, emoji: string) =>
-  api.post<Comment>(`/api/comments/${commentId}/reactions`, { emoji }).then((r) => r.data);
+  api.post<Comment>(`/comments/${commentId}/reactions`, { emoji }).then((r) => r.data);
 export const getPRDetails = (owner: string, repo: string, number: string) =>
-  api.get<{ title: string; number: number }>(`/api/github/repos/${owner}/${repo}/pulls/${number}`).then((r) => r.data);
+  api.get<{ title: string; number: number }>(`/github/repos/${owner}/${repo}/pulls/${number}`).then((r) => r.data);
 export const getPRFiles = (owner: string, repo: string, number: string) =>
-  api.get<GithubFile[]>(`/api/github/repos/${owner}/${repo}/pulls/${number}/files`).then((r) => r.data);
+  api.get<GithubFile[]>(`/github/repos/${owner}/${repo}/pulls/${number}/files`).then((r) => r.data);

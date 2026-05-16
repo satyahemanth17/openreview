@@ -85,7 +85,7 @@ export default function HomePage() {
         <h1 className="font-bold text-gh-textPrimary">OpenReview</h1>
         <button
           onClick={() => setShowImport(true)}
-          className="px-4 py-1.5 bg-gh-green text-[#0f1117] text-sm font-medium rounded-md hover:bg-gh-green/90 cursor-pointer"
+          className="px-4 py-1.5 bg-[#3ecf8e] text-[#0f1117] text-sm font-medium rounded-md hover:opacity-90 cursor-pointer"
         >
           Import PR
         </button>
@@ -143,7 +143,7 @@ export default function HomePage() {
               <button
                 onClick={handleImport}
                 disabled={importing}
-                className="px-4 py-1.5 bg-gh-green text-[#0f1117] text-sm font-medium rounded disabled:opacity-50 hover:bg-gh-green/90 cursor-pointer"
+                className="px-4 py-1.5 bg-[#3ecf8e] text-[#0f1117] text-sm font-medium rounded disabled:opacity-50 hover:opacity-90 cursor-pointer"
               >
                 {importing ? 'Importing...' : 'Import'}
               </button>
