@@ -80,7 +80,7 @@ function CommentItem({
           <button
             key={emoji}
             onClick={() => handleReaction(emoji)}
-            className={`text-xs px-1.5 py-0.5 rounded border transition-colors ${
+            className={`text-xs px-1.5 py-0.5 rounded border transition-colors cursor-pointer ${
               count > 0
                 ? 'border-gh-primary/50 bg-gh-primary/10 text-gh-textPrimary'
                 : 'border-gh-border text-gh-textSecondary hover:border-gh-primary/50'
@@ -107,12 +107,12 @@ function CommentItem({
       <div className="flex gap-2 mt-2">
         <button
           onClick={() => setShowReply(!showReply)}
-          className="text-xs text-gh-textSecondary hover:text-gh-primary"
+          className="text-xs text-gh-textSecondary hover:text-gh-primary cursor-pointer"
         >
           Reply
         </button>
         {!comment.resolved && (
-          <button onClick={handleResolve} className="text-xs text-gh-textSecondary hover:text-gh-success">
+          <button onClick={handleResolve} className="text-xs text-gh-textSecondary hover:text-gh-success cursor-pointer">
             Resolve
           </button>
         )}
@@ -130,7 +130,7 @@ function CommentItem({
           <button
             onClick={handleReply}
             disabled={loading}
-            className="px-3 py-1 text-sm bg-gh-primary text-white rounded disabled:opacity-50"
+            className="px-3 py-1 text-sm bg-gh-primary text-white rounded disabled:opacity-50 cursor-pointer"
           >
             Reply
           </button>
@@ -186,7 +186,7 @@ export default function CommentThread({
         <button
           onClick={handleAdd}
           disabled={loading || !newBody.trim()}
-          className="mt-1 px-4 py-1.5 text-sm bg-gh-primary text-white rounded disabled:opacity-50 hover:bg-gh-primary/90"
+          className="mt-1 px-4 py-1.5 text-sm bg-gh-primary text-white rounded disabled:opacity-50 hover:bg-gh-primary/90 cursor-pointer"
         >
           Comment
         </button>

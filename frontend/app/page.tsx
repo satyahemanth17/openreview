@@ -85,7 +85,7 @@ export default function HomePage() {
         <h1 className="font-bold text-gh-textPrimary">OpenReview</h1>
         <button
           onClick={() => setShowImport(true)}
-          className="px-4 py-1.5 bg-gh-primary text-white text-sm rounded-md hover:bg-gh-primary/90"
+          className="px-4 py-1.5 bg-gh-green text-[#0f1117] text-sm font-medium rounded-md hover:bg-gh-green/90 cursor-pointer"
         >
           Import PR
         </button>
@@ -136,14 +136,14 @@ export default function HomePage() {
             <div className="flex justify-end gap-2 mt-4">
               <button
                 onClick={() => { setShowImport(false); setImportError(''); }}
-                className="px-4 py-1.5 text-sm text-gh-textSecondary hover:text-gh-textPrimary"
+                className="px-4 py-1.5 text-sm text-gh-textSecondary hover:text-gh-textPrimary cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleImport}
                 disabled={importing}
-                className="px-4 py-1.5 bg-gh-primary text-white text-sm rounded disabled:opacity-50"
+                className="px-4 py-1.5 bg-gh-green text-[#0f1117] text-sm font-medium rounded disabled:opacity-50 hover:bg-gh-green/90 cursor-pointer"
               >
                 {importing ? 'Importing...' : 'Import'}
               </button>
