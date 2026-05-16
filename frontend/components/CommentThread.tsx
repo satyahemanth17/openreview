@@ -95,7 +95,7 @@ function CommentItem({
       {comment.replies.length > 0 && (
         <div className="mt-2 pl-3 border-l border-gh-border space-y-2">
           {comment.replies.map((reply, i) => (
-            <div key={i} className="text-sm">
+            <div key={`${reply.createdAt}-${i}`} className="text-sm">
               <span className="font-medium text-gh-textPrimary">{reply.author.username}: </span>
               <span className="text-gh-textPrimary">{reply.body}</span>
             </div>
@@ -125,7 +125,7 @@ function CommentItem({
             placeholder="Write a reply..."
             value={replyBody}
             onChange={(e) => setReplyBody(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleReply()}
+            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && !loading && handleReply()}
           />
           <button
             onClick={handleReply}
@@ -144,13 +144,11 @@ export default function CommentThread({
   comments,
   onUpdate,
   onAdd,
-  reviewId,
   filename,
 }: {
   comments: Comment[];
   onUpdate: (updated: Comment) => void;
   onAdd: (body: string) => Promise<void>;
-  reviewId: string;
   filename?: string;
 }) {
   const [newBody, setNewBody] = useState('');

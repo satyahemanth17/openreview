@@ -21,7 +21,7 @@ export default function HomePage() {
     if (t) {
       getReviews()
         .then(setReviews)
-        .catch(() => {})
+        .catch((err) => console.error('Failed to load reviews:', err))
         .finally(() => setLoading(false));
     } else {
       setLoading(false);
@@ -30,13 +30,17 @@ export default function HomePage() {
 
   async function handleImport() {
     const { owner, repo, pr } = importForm;
-    if (!owner || !repo || !pr) return;
+    if (!owner.trim() || !repo.trim() || !/^\d+$/.test(pr.trim())) {
+      setImportError('Please enter a valid owner, repo, and PR number.');
+      return;
+    }
+    const prNum = pr.trim();
     setImporting(true);
     setImportError('');
     try {
       const [prDetails, prFiles] = await Promise.all([
-        getPRDetails(owner, repo, pr),
-        getPRFiles(owner, repo, pr),
+        getPRDetails(owner, repo, prNum),
+        getPRFiles(owner, repo, prNum),
       ]);
       const files: ReviewFile[] = prFiles
         .filter((f: GithubFile) => f.patch != null)

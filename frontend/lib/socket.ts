@@ -13,6 +13,11 @@ export function getSocket(): Socket {
   return socket;
 }
 
+export function resetSocket(): void {
+  socket?.disconnect();
+  socket = null;
+}
+
 export function joinReview(reviewId: string): void {
   getSocket().emit('review:join', reviewId);
 }

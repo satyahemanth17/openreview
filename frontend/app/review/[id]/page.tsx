@@ -15,18 +15,21 @@ export default function ReviewPage() {
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [activeReviewers, setActiveReviewers] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
-    Promise.all([getReview(id), getComments(id)])
+    if (!id) return;
+
+    Promise.all([getReview(id ?? ''), getComments(id ?? '')])
       .then(([r, c]) => {
         setReview(r);
         setComments(c);
         if (r.files.length > 0) setSelectedFile(r.files[0].filename);
       })
-      .catch(() => {})
+      .catch((err) => { console.error('Failed to load review:', err); setError(true); })
       .finally(() => setLoading(false));
 
-    joinReview(id);
+    joinReview(id ?? '');
 
     const socket = getSocket();
     const onNew = (c: Comment) => setComments((prev) => [...prev, c]);
@@ -44,7 +47,7 @@ export default function ReviewPage() {
     socket.on('reviewer:left', onLeft);
 
     return () => {
-      leaveReview(id);
+      leaveReview(id ?? '');
       socket.off('comment:new', onNew);
       socket.off('comment:reply', onReply);
       socket.off('comment:resolved', onResolved);
@@ -59,7 +62,7 @@ export default function ReviewPage() {
 
   const handleAddComment = useCallback(
     async (body: string) => {
-      const created = await createComment(id, { filename: selectedFile ?? undefined, body });
+      const created = await createComment(id ?? '', { filename: selectedFile ?? undefined, body });
       setComments((prev) => [...prev, created]);
     },
     [id, selectedFile]
@@ -69,6 +72,14 @@ export default function ReviewPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gh-bg">
         <p className="text-gh-textSecondary">Loading review...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gh-bg">
+        <p className="text-red-400">Failed to load review. Please try again.</p>
       </div>
     );
   }
@@ -145,7 +156,6 @@ export default function ReviewPage() {
             comments={comments}
             onUpdate={handleUpdateComment}
             onAdd={handleAddComment}
-            reviewId={id}
             filename={selectedFile ?? undefined}
           />
         </aside>
