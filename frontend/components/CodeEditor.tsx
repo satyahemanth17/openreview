@@ -89,6 +89,11 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
     const decorationOrigRef = useRef<string[] | null>(null);
     const selectionDecorationRef = useRef<string[] | null>(null);
     const selectionDecorationOrigRef = useRef<string[] | null>(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const origEditorRef = useRef<any>(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const monacoRef = useRef<any>(null);
+    const navIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     useEffect(() => {
       ensureDiffStyles();
@@ -99,6 +104,12 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
       setShowInput(false);
       setInputBody('');
     }, [filename]);
+
+    useEffect(() => {
+      return () => {
+        if (navIntervalRef.current) clearInterval(navIntervalRef.current);
+      };
+    }, []);
 
     const doNavigate = useCallback((lineStart: number, lineEnd: number, pane?: 'original' | 'modified') => {
       console.log('[navigateToLine] pane:', pane, 'lineStart:', lineStart, 'lineEnd:', lineEnd);
@@ -117,14 +128,32 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
       const range = { startLineNumber: lineStart, startColumn: 1, endLineNumber: lineEnd, endColumn: Number.MAX_VALUE };
       const decoration = [{ range, options: { isWholeLine: true, className: 'openreview-highlight-line' } }];
       if (pane === 'original') {
-        requestAnimationFrame(() => {
+        if (navIntervalRef.current) clearInterval(navIntervalRef.current);
+        let attempts = 0;
+        const maxAttempts = 10;
+        navIntervalRef.current = setInterval(() => {
+          attempts++;
           try {
-            origEditor.focus();
-            origEditor.setSelection({ startLineNumber: lineStart, startColumn: 1, endLineNumber: lineStart, endColumn: 1 });
-            origEditor.revealLineInCenter(lineStart);
-            decorationOrigRef.current = origEditor.deltaDecorations([], decoration);
-          } catch {}
-        });
+            const editor = origEditorRef.current;
+            if (!editor) {
+              if (attempts >= maxAttempts) { clearInterval(navIntervalRef.current!); navIntervalRef.current = null; }
+              return;
+            }
+            editor.focus();
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            editor.revealLineInCenter(lineStart, 1 as any);
+            decorationOrigRef.current = editor.deltaDecorations([], [{
+              range: monacoRef.current
+                ? new monacoRef.current.Range(lineStart, 1, lineEnd, Number.MAX_VALUE)
+                : { startLineNumber: lineStart, startColumn: 1, endLineNumber: lineEnd, endColumn: Number.MAX_VALUE },
+              options: { isWholeLine: true, className: 'openreview-highlight-line' },
+            }]);
+            clearInterval(navIntervalRef.current!);
+            navIntervalRef.current = null;
+          } catch {
+            if (attempts >= maxAttempts) { clearInterval(navIntervalRef.current!); navIntervalRef.current = null; }
+          }
+        }, 50);
       } else {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         modEditor.revealLineInCenter(lineStart, 1 as any);
@@ -184,8 +213,9 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
                 },
               });
             }}
-            onMount={(editor) => {
+            onMount={(editor, monacoInstance) => {
               editorRef.current = editor;
+              monacoRef.current = monacoInstance;
 
               // Patch dispose to work around Monaco 0.55.x DiffEditor dispose-order bug:
               // dispose() disposes TextModels before resetting the DiffEditorWidget model,
@@ -199,6 +229,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
 
               const modEditor = editor.getModifiedEditor();
               const origEditor = editor.getOriginalEditor();
+              origEditorRef.current = origEditor;
 
               function clearNavHighlight() {
                 try {
