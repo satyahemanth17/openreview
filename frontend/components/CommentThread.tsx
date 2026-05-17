@@ -140,7 +140,8 @@ function CommentItem({
 
 interface InlineGroup {
   filename: string;
-  line: number;
+  lineStart: number;
+  lineEnd: number;
   items: Comment[];
 }
 
@@ -160,20 +161,20 @@ export default function CommentThread({
   const [newBody, setNewBody] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Inline: attached to a specific file line; General: everything else
-  const inlineComments = comments.filter((c) => c.filename != null && c.line != null);
-  const generalComments = comments.filter((c) => c.filename == null || c.line == null);
+  // Inline: attached to a specific file line range; General: everything else
+  const inlineComments = comments.filter((c) => c.filename != null && c.lineStart != null);
+  const generalComments = comments.filter((c) => c.filename == null || c.lineStart == null);
 
-  // Group inline by filename + line, sorted
+  // Group inline by filename + lineStart + lineEnd, sorted
   const groupMap: Record<string, InlineGroup> = {};
   for (const c of inlineComments) {
-    const key = `${c.filename}:${c.line}`;
-    if (!groupMap[key]) groupMap[key] = { filename: c.filename!, line: c.line!, items: [] };
+    const key = `${c.filename}:${c.lineStart}:${c.lineEnd}`;
+    if (!groupMap[key]) groupMap[key] = { filename: c.filename!, lineStart: c.lineStart!, lineEnd: c.lineEnd ?? c.lineStart!, items: [] };
     groupMap[key].items.push(c);
   }
   const groups = Object.values(groupMap).sort((a, b) => {
     const fc = a.filename.localeCompare(b.filename);
-    return fc !== 0 ? fc : a.line - b.line;
+    return fc !== 0 ? fc : a.lineStart - b.lineStart;
   });
 
   async function handleAdd() {
@@ -196,12 +197,12 @@ export default function CommentThread({
             Inline Comments ({inlineComments.length})
           </h3>
           {groups.map((group) => (
-            <div key={`${group.filename}:${group.line}`} className="flex flex-col gap-2">
+            <div key={`${group.filename}:${group.lineStart}:${group.lineEnd}`} className="flex flex-col gap-2">
               <button
-                onClick={() => onInlineCommentClick?.(group.filename, group.line)}
+                onClick={() => onInlineCommentClick?.(group.filename, group.lineStart)}
                 className="text-xs font-mono text-gh-primary px-2 py-1 bg-gh-primary/10 rounded hover:bg-gh-primary/20 cursor-pointer w-full text-left transition-colors"
               >
-                {group.filename} · Line {group.line}
+                {group.filename} · {group.lineStart === group.lineEnd ? `Line ${group.lineStart}` : `Lines ${group.lineStart}–${group.lineEnd}`}
               </button>
               {group.items.map((c) => (
                 <CommentItem key={c._id} comment={c} onUpdate={onUpdate} />

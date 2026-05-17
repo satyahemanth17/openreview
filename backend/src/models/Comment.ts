@@ -15,7 +15,8 @@ export interface IComment extends Document {
   reviewId: Types.ObjectId | string;
   author: Types.ObjectId | string;
   filename?: string;
-  line?: number;
+  lineStart?: number;
+  lineEnd?: number;
   body: string;
   resolved: boolean;
   replies: IReply[];
@@ -45,7 +46,8 @@ const CommentSchema = new Schema<IComment>(
     reviewId: { type: Schema.Types.ObjectId, ref: 'Review', required: true },
     author: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     filename: { type: String },
-    line: { type: Number },
+    lineStart: { type: Number },
+    lineEnd: { type: Number },
     body: { type: String, required: true },
     resolved: { type: Boolean, default: false },
     replies: { type: [ReplySchema], default: [] },
@@ -55,6 +57,6 @@ const CommentSchema = new Schema<IComment>(
 );
 
 // Compound index per spec
-CommentSchema.index({ reviewId: 1, filename: 1, line: 1 });
+CommentSchema.index({ reviewId: 1, filename: 1, lineStart: 1 });
 
 export const Comment = mongoose.model<IComment>('Comment', CommentSchema);
