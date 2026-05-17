@@ -8,9 +8,13 @@ const EMOJIS = ['👍', '👎', '❤️', '🚀', '👀'];
 function CommentItem({
   comment,
   onUpdate,
+  onDelete,
+  isOwner,
 }: {
   comment: Comment;
   onUpdate: (updated: Comment) => void;
+  onDelete?: () => void;
+  isOwner?: boolean;
 }) {
   const [replyBody, setReplyBody] = useState('');
   const [showReply, setShowReply] = useState(false);
@@ -53,16 +57,28 @@ function CommentItem({
   }));
 
   return (
-    <div className={`border border-gh-border rounded-lg p-3 ${comment.resolved ? 'opacity-60' : ''}`}>
+    <div className={`group border border-gh-border rounded-lg p-3 ${comment.resolved ? 'opacity-60' : ''}`}>
       <div className="flex items-center gap-2 mb-2">
         {comment.author.avatarUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={comment.author.avatarUrl} alt="" className="w-6 h-6 rounded-full" />
         )}
         <span className="text-sm font-medium text-gh-textPrimary">{comment.author.username}</span>
-        <span className="ml-auto">
+        <span className="ml-auto flex items-center gap-1">
           {comment.resolved && (
             <span className="text-xs text-gh-success px-1.5 py-0.5 bg-gh-success/10 rounded">resolved</span>
+          )}
+          {isOwner && onDelete && (
+            <button
+              onClick={onDelete}
+              className="opacity-0 group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-300 cursor-pointer p-0.5"
+              title="Delete comment"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+            </button>
           )}
         </span>
       </div>
@@ -202,28 +218,14 @@ export default function CommentThread({
           </h3>
           {groups.map((group) => (
             <div key={`${group.filename}:${group.lineStart}:${group.lineEnd}`} className="flex flex-col gap-2">
-              <div className="group flex items-center bg-gh-primary/10 rounded hover:bg-gh-primary/20 transition-colors">
-                <button
-                  onClick={() => { console.log('[chip click] pane:', group.items[0]?.pane, 'lineStart:', group.lineStart, 'lineEnd:', group.lineEnd); onInlineCommentClick?.(group.filename, group.lineStart, group.lineEnd, group.items[0]?.pane); }}
-                  className="flex-1 text-xs font-mono text-gh-primary px-2 py-1 cursor-pointer text-left"
-                >
-                  {group.filename} · {group.lineStart === group.lineEnd ? `Line ${group.lineStart}` : `Lines ${group.lineStart}–${group.lineEnd}`}
-                </button>
-                {onDeleteInlineComment && currentUserId && currentUserId === group.items[0]?.author._id && (
-                  <button
-                    onClick={() => onDeleteInlineComment(group.items[0]._id)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity mr-1.5 p-0.5 text-red-400 hover:text-red-300 cursor-pointer shrink-0"
-                    title="Delete comment thread"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="3 6 5 6 21 6" />
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                    </svg>
-                  </button>
-                )}
-              </div>
+              <button
+                onClick={() => { console.log('[chip click] pane:', group.items[0]?.pane, 'lineStart:', group.lineStart, 'lineEnd:', group.lineEnd); onInlineCommentClick?.(group.filename, group.lineStart, group.lineEnd, group.items[0]?.pane); }}
+                className="text-xs font-mono text-gh-primary px-2 py-1 bg-gh-primary/10 rounded hover:bg-gh-primary/20 cursor-pointer w-full text-left transition-colors"
+              >
+                {group.filename} · {group.lineStart === group.lineEnd ? `Line ${group.lineStart}` : `Lines ${group.lineStart}–${group.lineEnd}`}
+              </button>
               {group.items.map((c) => (
-                <CommentItem key={c._id} comment={c} onUpdate={onUpdate} />
+                <CommentItem key={c._id} comment={c} onUpdate={onUpdate} onDelete={onDeleteInlineComment ? () => onDeleteInlineComment(c._id) : undefined} isOwner={currentUserId === c.author._id} />
               ))}
             </div>
           ))}
@@ -236,7 +238,7 @@ export default function CommentThread({
           General Comments {generalComments.length > 0 && `(${generalComments.length})`}
         </h3>
         {generalComments.map((c) => (
-          <CommentItem key={c._id} comment={c} onUpdate={onUpdate} />
+          <CommentItem key={c._id} comment={c} onUpdate={onUpdate} onDelete={onDeleteInlineComment ? () => onDeleteInlineComment(c._id) : undefined} isOwner={currentUserId === c.author._id} />
         ))}
         <div className="mt-2">
           <textarea

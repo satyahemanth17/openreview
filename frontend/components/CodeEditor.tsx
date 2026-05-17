@@ -117,8 +117,14 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
       const range = { startLineNumber: lineStart, startColumn: 1, endLineNumber: lineEnd, endColumn: Number.MAX_VALUE };
       const decoration = [{ range, options: { isWholeLine: true, className: 'openreview-highlight-line' } }];
       if (pane === 'original') {
-        origEditor.revealLineInCenter(lineStart);
-        decorationOrigRef.current = origEditor.deltaDecorations([], decoration);
+        requestAnimationFrame(() => {
+          try {
+            origEditor.focus();
+            origEditor.setSelection({ startLineNumber: lineStart, startColumn: 1, endLineNumber: lineStart, endColumn: 1 });
+            origEditor.revealLineInCenter(lineStart);
+            decorationOrigRef.current = origEditor.deltaDecorations([], decoration);
+          } catch {}
+        });
       } else {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         modEditor.revealLineInCenter(lineStart, 1 as any);
