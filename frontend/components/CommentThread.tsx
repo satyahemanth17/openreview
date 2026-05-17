@@ -111,9 +111,13 @@ function CommentItem({
         >
           Reply
         </button>
-        {!comment.resolved && (
+        {!comment.resolved ? (
           <button onClick={handleResolve} className="text-xs text-gh-textSecondary hover:text-gh-success cursor-pointer">
             Resolve
+          </button>
+        ) : (
+          <button onClick={handleResolve} className="text-xs text-gh-textSecondary hover:text-gh-primary cursor-pointer">
+            Reopen
           </button>
         )}
       </div>
