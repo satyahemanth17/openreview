@@ -60,12 +60,6 @@ function CommentItem({
           <img src={comment.author.avatarUrl} alt="" className="w-6 h-6 rounded-full" />
         )}
         <span className="text-sm font-medium text-gh-textPrimary">{comment.author.username}</span>
-        {comment.filename && (
-          <span className="text-xs text-gh-textSecondary font-mono">
-            {comment.filename}
-            {comment.line != null ? `:${comment.line}` : ''}
-          </span>
-        )}
         <span className="ml-auto">
           {comment.resolved && (
             <span className="text-xs text-gh-success px-1.5 py-0.5 bg-gh-success/10 rounded">resolved</span>
@@ -144,6 +138,12 @@ function CommentItem({
   );
 }
 
+interface InlineGroup {
+  filename: string;
+  line: number;
+  items: Comment[];
+}
+
 export default function CommentThread({
   comments,
   onUpdate,
@@ -158,7 +158,21 @@ export default function CommentThread({
   const [newBody, setNewBody] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const filtered = filename ? comments.filter((c) => c.filename === filename) : comments;
+  // Inline: attached to a specific file line; General: everything else
+  const inlineComments = comments.filter((c) => c.filename != null && c.line != null);
+  const generalComments = comments.filter((c) => c.filename == null || c.line == null);
+
+  // Group inline by filename + line, sorted
+  const groupMap: Record<string, InlineGroup> = {};
+  for (const c of inlineComments) {
+    const key = `${c.filename}:${c.line}`;
+    if (!groupMap[key]) groupMap[key] = { filename: c.filename!, line: c.line!, items: [] };
+    groupMap[key].items.push(c);
+  }
+  const groups = Object.values(groupMap).sort((a, b) => {
+    const fc = a.filename.localeCompare(b.filename);
+    return fc !== 0 ? fc : a.line - b.line;
+  });
 
   async function handleAdd() {
     if (!newBody.trim()) return;
@@ -172,28 +186,50 @@ export default function CommentThread({
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <h3 className="text-sm font-semibold text-gh-textSecondary uppercase tracking-wide">
-        Comments {filtered.length > 0 && `(${filtered.length})`}
-      </h3>
-      {filtered.map((c) => (
-        <CommentItem key={c._id} comment={c} onUpdate={onUpdate} />
-      ))}
-      <div className="mt-2">
-        <textarea
-          className="w-full bg-gh-bg border border-gh-border rounded px-3 py-2 text-sm text-gh-textPrimary focus:outline-none focus:border-gh-primary resize-none"
-          rows={3}
-          placeholder="Leave a comment..."
-          value={newBody}
-          onChange={(e) => setNewBody(e.target.value)}
-        />
-        <button
-          onClick={handleAdd}
-          disabled={loading || !newBody.trim()}
-          className="mt-1 px-4 py-1.5 text-sm bg-gh-primary text-white rounded disabled:opacity-50 hover:bg-gh-primary/90 cursor-pointer"
-        >
-          Comment
-        </button>
+    <div className="flex flex-col gap-4">
+      {/* Inline Comments */}
+      {groups.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <h3 className="text-sm font-semibold text-gh-textSecondary uppercase tracking-wide">
+            Inline Comments ({inlineComments.length})
+          </h3>
+          {groups.map((group) => (
+            <div key={`${group.filename}:${group.line}`} className="flex flex-col gap-2">
+              <p className="text-xs font-mono text-gh-primary px-2 py-1 bg-gh-primary/10 rounded">
+                {group.filename} · Line {group.line}
+              </p>
+              {group.items.map((c) => (
+                <CommentItem key={c._id} comment={c} onUpdate={onUpdate} />
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* General Comments */}
+      <div className="flex flex-col gap-3">
+        <h3 className="text-sm font-semibold text-gh-textSecondary uppercase tracking-wide">
+          General Comments {generalComments.length > 0 && `(${generalComments.length})`}
+        </h3>
+        {generalComments.map((c) => (
+          <CommentItem key={c._id} comment={c} onUpdate={onUpdate} />
+        ))}
+        <div className="mt-2">
+          <textarea
+            className="w-full bg-gh-bg border border-gh-border rounded px-3 py-2 text-sm text-gh-textPrimary focus:outline-none focus:border-gh-primary resize-none"
+            rows={3}
+            placeholder={filename ? `Leave a comment on ${filename}...` : 'Leave a comment...'}
+            value={newBody}
+            onChange={(e) => setNewBody(e.target.value)}
+          />
+          <button
+            onClick={handleAdd}
+            disabled={loading || !newBody.trim()}
+            className="mt-1 px-4 py-1.5 text-sm bg-gh-primary text-white rounded disabled:opacity-50 hover:bg-gh-primary/90 cursor-pointer"
+          >
+            Comment
+          </button>
+        </div>
       </div>
     </div>
   );

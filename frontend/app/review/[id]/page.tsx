@@ -71,6 +71,13 @@ export default function ReviewPage() {
     [id, selectedFile]
   );
 
+  const handleAddLineComment = useCallback(
+    async (line: number, body: string) => {
+      await createComment(id ?? '', { filename: selectedFile ?? undefined, line, body });
+    },
+    [id, selectedFile]
+  );
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gh-bg">
@@ -145,7 +152,11 @@ export default function ReviewPage() {
         {/* Editor */}
         <main className="flex-1 overflow-hidden">
           {currentFile ? (
-            <CodeEditor filename={currentFile.filename} patch={currentFile.patch} />
+            <CodeEditor
+              filename={currentFile.filename}
+              patch={currentFile.patch}
+              onAddLineComment={handleAddLineComment}
+            />
           ) : (
             <div className="flex items-center justify-center h-full text-gh-textSecondary">
               Select a file to view
