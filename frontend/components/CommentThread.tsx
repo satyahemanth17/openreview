@@ -156,7 +156,7 @@ export default function CommentThread({
   onUpdate: (updated: Comment) => void;
   onAdd: (body: string) => Promise<void>;
   filename?: string;
-  onInlineCommentClick?: (filename: string, line: number) => void;
+  onInlineCommentClick?: (filename: string, lineStart: number, lineEnd: number) => void;
 }) {
   const [newBody, setNewBody] = useState('');
   const [loading, setLoading] = useState(false);
@@ -199,7 +199,7 @@ export default function CommentThread({
           {groups.map((group) => (
             <div key={`${group.filename}:${group.lineStart}:${group.lineEnd}`} className="flex flex-col gap-2">
               <button
-                onClick={() => onInlineCommentClick?.(group.filename, group.lineStart)}
+                onClick={() => onInlineCommentClick?.(group.filename, group.lineStart, group.lineEnd)}
                 className="text-xs font-mono text-gh-primary px-2 py-1 bg-gh-primary/10 rounded hover:bg-gh-primary/20 cursor-pointer w-full text-left transition-colors"
               >
                 {group.filename} · {group.lineStart === group.lineEnd ? `Line ${group.lineStart}` : `Lines ${group.lineStart}–${group.lineEnd}`}
