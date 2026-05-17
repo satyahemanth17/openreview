@@ -149,7 +149,16 @@ router.post('/:id/reactions', async (req: Request, res: Response): Promise<void>
     }
 
     await comment.save();
-    res.json(comment);
+
+    const populated = await comment
+      .populate('author', 'username avatarUrl')
+      .then((c) => c.populate('replies.author', 'username avatarUrl'));
+
+    if (io) {
+      io.to(comment.reviewId.toString()).emit('comment:reaction', populated);
+    }
+
+    res.json(populated);
   } catch {
     res.status(500).json({ error: 'Failed to update reaction' });
   }

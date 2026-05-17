@@ -32,25 +32,28 @@ export default function ReviewPage() {
     joinReview(id ?? '');
 
     const socket = getSocket();
-    const onNew = (c: Comment) => setComments((prev) => [...prev, c]);
-    const onReply = (c: Comment) => setComments((prev) => prev.map((x) => (x._id === c._id ? c : x)));
-    const onResolved = (c: Comment) => setComments((prev) => prev.map((x) => (x._id === c._id ? c : x)));
+    const updateComment = (c: Comment) => setComments((prev) => prev.map((x) => (x._id === c._id ? c : x)));
+    const onNew = (c: Comment) => setComments((prev) =>
+      prev.some((x) => x._id === c._id) ? prev : [...prev, c]
+    );
     const onJoined = ({ username }: { username: string }) =>
       setActiveReviewers((prev) => [...new Set([...prev, username])]);
     const onLeft = ({ username }: { username: string }) =>
       setActiveReviewers((prev) => prev.filter((u) => u !== username));
 
     socket.on('comment:new', onNew);
-    socket.on('comment:reply', onReply);
-    socket.on('comment:resolved', onResolved);
+    socket.on('comment:reply', updateComment);
+    socket.on('comment:resolved', updateComment);
+    socket.on('comment:reaction', updateComment);
     socket.on('reviewer:joined', onJoined);
     socket.on('reviewer:left', onLeft);
 
     return () => {
       leaveReview(id ?? '');
       socket.off('comment:new', onNew);
-      socket.off('comment:reply', onReply);
-      socket.off('comment:resolved', onResolved);
+      socket.off('comment:reply', updateComment);
+      socket.off('comment:resolved', updateComment);
+      socket.off('comment:reaction', updateComment);
       socket.off('reviewer:joined', onJoined);
       socket.off('reviewer:left', onLeft);
     };
@@ -62,8 +65,8 @@ export default function ReviewPage() {
 
   const handleAddComment = useCallback(
     async (body: string) => {
-      const created = await createComment(id ?? '', { filename: selectedFile ?? undefined, body });
-      setComments((prev) => [...prev, created]);
+      await createComment(id ?? '', { filename: selectedFile ?? undefined, body });
+      // State update comes via comment:new socket event (deduplicated) — no optimistic add
     },
     [id, selectedFile]
   );
