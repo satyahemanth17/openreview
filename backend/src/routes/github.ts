@@ -9,11 +9,14 @@ const router = Router();
 router.use(authenticateToken);
 
 const GITHUB_API = 'https://api.github.com';
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
 async function getAccessToken(userId: string | undefined): Promise<string | null> {
-  if (!userId) return null;
-  const user = await User.findById(userId);
-  return user?.accessToken ?? null;
+  if (userId) {
+    const user = await User.findById(userId);
+    if (user?.accessToken) return user.accessToken;
+  }
+  return GITHUB_TOKEN || null;
 }
 
 function githubHeaders(token: string) {
@@ -41,7 +44,8 @@ router.get('/repos', async (req: Request, res: Response): Promise<void> => {
     });
 
     res.json(response.data);
-  } catch {
+  } catch (err) {
+    console.error('[github] GET /repos error:', err);
     res.status(500).json({ error: 'Failed to fetch repos' });
   }
 });
@@ -64,7 +68,8 @@ router.get('/repos/:owner/:repo/pulls', async (req: Request, res: Response): Pro
     });
 
     res.json(response.data);
-  } catch {
+  } catch (err) {
+    console.error(`[github] GET /repos/${req.params.owner}/${req.params.repo}/pulls error:`, err);
     res.status(500).json({ error: 'Failed to fetch pull requests' });
   }
 });
@@ -86,7 +91,8 @@ router.get('/repos/:owner/:repo/pulls/:number', async (req: Request, res: Respon
     });
 
     res.json(response.data);
-  } catch {
+  } catch (err) {
+    console.error(`[github] GET /repos/${req.params.owner}/${req.params.repo}/pulls/${req.params.number} error:`, err);
     res.status(500).json({ error: 'Failed to fetch pull request' });
   }
 });
@@ -109,7 +115,8 @@ router.get('/repos/:owner/:repo/pulls/:number/files', async (req: Request, res: 
     });
 
     res.json(response.data);
-  } catch {
+  } catch (err) {
+    console.error(`[github] GET /repos/${req.params.owner}/${req.params.repo}/pulls/${req.params.number}/files error:`, err);
     res.status(500).json({ error: 'Failed to fetch PR files' });
   }
 });

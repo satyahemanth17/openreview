@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import ReviewCard from '../components/ReviewCard';
 import { Review, ReviewFile, GithubFile, getReviews, createReview, getPRDetails, getPRFiles } from '../lib/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api').replace(/\/api$/, '');
 
 export default function HomePage() {
   const [token, setToken] = useState<string | null>(null);
