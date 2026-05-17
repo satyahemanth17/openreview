@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import CodeEditor, { CodeEditorHandle } from '../../../components/CodeEditor';
 import CommentThread from '../../../components/CommentThread';
-import { Review, Comment, getReview, getComments, createComment } from '../../../lib/api';
+import { Review, Comment, getReview, getComments, createComment, deleteComment } from '../../../lib/api';
 import { joinReview, leaveReview, getSocket } from '../../../lib/socket';
 
 export default function ReviewPage() {
@@ -14,10 +14,21 @@ export default function ReviewPage() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [activeReviewers, setActiveReviewers] = useState<string[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const codeEditorRef = useRef<CodeEditorHandle | null>(null);
   const pendingHighlightRef = useRef<{ lineStart: number; lineEnd: number; pane?: 'original' | 'modified' } | null>(null);
+
+  useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setCurrentUserId(payload._id ?? payload.id ?? null);
+      } catch {}
+    }
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -42,11 +53,14 @@ export default function ReviewPage() {
       setActiveReviewers((prev) => [...new Set([...prev, username])]);
     const onLeft = ({ username }: { username: string }) =>
       setActiveReviewers((prev) => prev.filter((u) => u !== username));
+    const onDeleted = ({ commentId }: { commentId: string }) =>
+      setComments((prev) => prev.filter((c) => c._id !== commentId));
 
     socket.on('comment:new', onNew);
     socket.on('comment:reply', updateComment);
     socket.on('comment:resolved', updateComment);
     socket.on('comment:reaction', updateComment);
+    socket.on('comment:deleted', onDeleted);
     socket.on('reviewer:joined', onJoined);
     socket.on('reviewer:left', onLeft);
 
@@ -56,6 +70,7 @@ export default function ReviewPage() {
       socket.off('comment:reply', updateComment);
       socket.off('comment:resolved', updateComment);
       socket.off('comment:reaction', updateComment);
+      socket.off('comment:deleted', onDeleted);
       socket.off('reviewer:joined', onJoined);
       socket.off('reviewer:left', onLeft);
     };
@@ -72,6 +87,11 @@ export default function ReviewPage() {
     },
     [id, selectedFile]
   );
+
+  const handleDeleteComment = useCallback(async (commentId: string) => {
+    await deleteComment(commentId);
+    setComments((prev) => prev.filter((c) => c._id !== commentId));
+  }, []);
 
   const handleAddLineComment = useCallback(
     async (lineStart: number, lineEnd: number, body: string, pane: 'original' | 'modified') => {
@@ -194,6 +214,8 @@ export default function ReviewPage() {
             onAdd={handleAddComment}
             filename={selectedFile ?? undefined}
             onInlineCommentClick={handleInlineCommentClick}
+            onDeleteInlineComment={handleDeleteComment}
+            currentUserId={currentUserId}
           />
         </aside>
       </div>

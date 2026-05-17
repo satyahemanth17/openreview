@@ -32,6 +32,9 @@ export function registerSocketHandlers(io: Server): void {
       socket.to(data.reviewId).emit('cursor:move', data);
     });
 
+    // comment:deleted — server-to-client event; emitted by DELETE /api/comments/:id
+    // after auth verification and DB deletion. No client-initiated handler needed.
+
     socket.on('disconnect', () => {
       console.log(`Socket disconnected: ${socket.id}`);
     });

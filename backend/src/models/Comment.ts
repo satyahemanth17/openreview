@@ -17,6 +17,7 @@ export interface IComment extends Document {
   filename?: string;
   lineStart?: number;
   lineEnd?: number;
+  pane?: 'original' | 'modified';
   body: string;
   resolved: boolean;
   replies: IReply[];
@@ -48,6 +49,7 @@ const CommentSchema = new Schema<IComment>(
     filename: { type: String },
     lineStart: { type: Number },
     lineEnd: { type: Number },
+    pane: { type: String, enum: ['original', 'modified'] },
     body: { type: String, required: true },
     resolved: { type: Boolean, default: false },
     replies: { type: [ReplySchema], default: [] },

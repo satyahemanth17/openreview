@@ -31,10 +31,11 @@ router.get('/review/:reviewId', async (req: Request, res: Response): Promise<voi
 // POST /review/:reviewId — create new comment
 router.post('/review/:reviewId', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { filename, lineStart, lineEnd, body } = req.body as {
+    const { filename, lineStart, lineEnd, pane, body } = req.body as {
       filename?: string;
       lineStart?: number;
       lineEnd?: number;
+      pane?: 'original' | 'modified';
       body: string;
     };
 
@@ -47,6 +48,7 @@ router.post('/review/:reviewId', async (req: Request, res: Response): Promise<vo
       filename,
       lineStart,
       lineEnd,
+      pane,
       body,
     });
     await comment.save();
@@ -122,6 +124,32 @@ router.post('/:id/reply', async (req: Request, res: Response): Promise<void> => 
     res.status(201).json(populated);
   } catch {
     res.status(500).json({ error: 'Failed to add reply' });
+  }
+});
+
+// DELETE /:id — delete comment (author only)
+router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.user) { res.status(401).json({ error: 'Unauthorized' }); return; }
+    const comment = await Comment.findById(req.params.id);
+    if (!comment) { res.status(404).json({ error: 'Comment not found' }); return; }
+
+    const userId = (req.user._id ?? req.user.id).toString();
+    if (comment.author.toString() !== userId) {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
+    const reviewId = comment.reviewId.toString();
+    await comment.deleteOne();
+
+    if (io) {
+      io.to(reviewId).emit('comment:deleted', { commentId: req.params.id });
+    }
+
+    res.status(204).end();
+  } catch {
+    res.status(500).json({ error: 'Failed to delete comment' });
   }
 });
 
