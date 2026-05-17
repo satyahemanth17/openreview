@@ -61,7 +61,7 @@ function ensureDiffStyles() {
 }
 
 export interface CodeEditorHandle {
-  navigateToLine: (lineStart: number, lineEnd: number) => void;
+  navigateToLine: (lineStart: number, lineEnd: number, pane?: 'original' | 'modified') => void;
 }
 
 interface CodeEditorProps {
@@ -86,6 +86,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
     const editorRef = useRef<any>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const decorationRef = useRef<string[] | null>(null);
+    const decorationOrigRef = useRef<string[] | null>(null);
     const selectionDecorationRef = useRef<string[] | null>(null);
     const selectionDecorationOrigRef = useRef<string[] | null>(null);
 
@@ -99,18 +100,27 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
       setInputBody('');
     }, [filename]);
 
-    const doNavigate = useCallback((lineStart: number, lineEnd: number) => {
+    const doNavigate = useCallback((lineStart: number, lineEnd: number, pane?: 'original' | 'modified') => {
       const modEditor = editorRef.current?.getModifiedEditor();
-      if (!modEditor) return;
+      const origEditor = editorRef.current?.getOriginalEditor();
+      if (!modEditor || !origEditor) return;
       if (decorationRef.current) {
         modEditor.deltaDecorations(decorationRef.current, []);
         decorationRef.current = null;
       }
-      modEditor.revealLineInCenter(lineStart);
-      decorationRef.current = modEditor.deltaDecorations([], [{
-        range: { startLineNumber: lineStart, startColumn: 1, endLineNumber: lineEnd, endColumn: Number.MAX_VALUE },
-        options: { isWholeLine: true, className: 'openreview-highlight-line' },
-      }]);
+      if (decorationOrigRef.current) {
+        origEditor.deltaDecorations(decorationOrigRef.current, []);
+        decorationOrigRef.current = null;
+      }
+      const range = { startLineNumber: lineStart, startColumn: 1, endLineNumber: lineEnd, endColumn: Number.MAX_VALUE };
+      const decoration = [{ range, options: { isWholeLine: true, className: 'openreview-highlight-line' } }];
+      if (pane === 'original') {
+        origEditor.revealLineInCenter(lineStart);
+        decorationOrigRef.current = origEditor.deltaDecorations([], decoration);
+      } else {
+        modEditor.revealLineInCenter(lineStart);
+        decorationRef.current = modEditor.deltaDecorations([], decoration);
+      }
     }, []);
 
     useImperativeHandle(ref, () => ({ navigateToLine: doNavigate }), [doNavigate]);
@@ -174,6 +184,10 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
                 if (decorationRef.current) {
                   modEditor.deltaDecorations(decorationRef.current, []);
                   decorationRef.current = null;
+                }
+                if (decorationOrigRef.current) {
+                  origEditor.deltaDecorations(decorationOrigRef.current, []);
+                  decorationOrigRef.current = null;
                 }
               }
 

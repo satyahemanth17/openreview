@@ -17,7 +17,7 @@ export default function ReviewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const codeEditorRef = useRef<CodeEditorHandle | null>(null);
-  const pendingHighlightRef = useRef<{ lineStart: number; lineEnd: number } | null>(null);
+  const pendingHighlightRef = useRef<{ lineStart: number; lineEnd: number; pane?: 'original' | 'modified' } | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -82,18 +82,18 @@ export default function ReviewPage() {
 
   const handleEditorReady = useCallback(() => {
     if (pendingHighlightRef.current) {
-      const { lineStart, lineEnd } = pendingHighlightRef.current;
+      const { lineStart, lineEnd, pane } = pendingHighlightRef.current;
       pendingHighlightRef.current = null;
-      codeEditorRef.current?.navigateToLine(lineStart, lineEnd);
+      codeEditorRef.current?.navigateToLine(lineStart, lineEnd, pane);
     }
   }, []);
 
-  const handleInlineCommentClick = useCallback((filename: string, lineStart: number, lineEnd: number) => {
-    pendingHighlightRef.current = { lineStart, lineEnd };
+  const handleInlineCommentClick = useCallback((filename: string, lineStart: number, lineEnd: number, pane?: 'original' | 'modified') => {
+    pendingHighlightRef.current = { lineStart, lineEnd, pane };
     if (filename !== selectedFile) {
       setSelectedFile(filename);
     } else {
-      codeEditorRef.current?.navigateToLine(lineStart, lineEnd);
+      codeEditorRef.current?.navigateToLine(lineStart, lineEnd, pane);
       pendingHighlightRef.current = null;
     }
   }, [selectedFile]);
