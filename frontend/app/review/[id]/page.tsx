@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import CodeEditor from '../../../components/CodeEditor';
+import CodeEditor, { CodeEditorHandle } from '../../../components/CodeEditor';
 import CommentThread from '../../../components/CommentThread';
 import { Review, Comment, getReview, getComments, createComment } from '../../../lib/api';
 import { joinReview, leaveReview, getSocket } from '../../../lib/socket';
@@ -16,7 +16,8 @@ export default function ReviewPage() {
   const [activeReviewers, setActiveReviewers] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [highlightLine, setHighlightLine] = useState<number | null>(null);
+  const codeEditorRef = useRef<CodeEditorHandle | null>(null);
+  const pendingHighlightRef = useRef<{ lineStart: number; lineEnd: number } | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -73,18 +74,28 @@ export default function ReviewPage() {
   );
 
   const handleAddLineComment = useCallback(
-    async (lineStart: number, lineEnd: number, body: string) => {
-      await createComment(id ?? '', { filename: selectedFile ?? undefined, lineStart, lineEnd, body });
+    async (lineStart: number, lineEnd: number, body: string, pane: 'original' | 'modified') => {
+      await createComment(id ?? '', { filename: selectedFile ?? undefined, lineStart, lineEnd, body, pane });
     },
     [id, selectedFile]
   );
 
+  const handleEditorReady = useCallback(() => {
+    if (pendingHighlightRef.current) {
+      const { lineStart, lineEnd } = pendingHighlightRef.current;
+      pendingHighlightRef.current = null;
+      codeEditorRef.current?.navigateToLine(lineStart, lineEnd);
+    }
+  }, []);
+
   const handleInlineCommentClick = useCallback((filename: string, line: number) => {
-    console.log('Inline comment click — lineStart:', line);
+    pendingHighlightRef.current = { lineStart: line, lineEnd: line };
     if (filename !== selectedFile) {
       setSelectedFile(filename);
+    } else {
+      codeEditorRef.current?.navigateToLine(line, line);
+      pendingHighlightRef.current = null;
     }
-    setHighlightLine(line);
   }, [selectedFile]);
 
   if (loading) {
@@ -137,7 +148,7 @@ export default function ReviewPage() {
               return (
                 <button
                   key={f.filename}
-                  onClick={() => { setSelectedFile(f.filename); setHighlightLine(null); }}
+                  onClick={() => { pendingHighlightRef.current = null; setSelectedFile(f.filename); }}
                   className={`w-full text-left px-2 py-1.5 rounded text-xs font-mono transition-colors ${
                     selectedFile === f.filename
                       ? 'bg-gh-primary/10 text-gh-primary'
@@ -162,10 +173,11 @@ export default function ReviewPage() {
         <main className="flex-1 overflow-hidden">
           {currentFile ? (
             <CodeEditor
+              ref={codeEditorRef}
               filename={currentFile.filename}
               patch={currentFile.patch}
               onAddLineComment={handleAddLineComment}
-              highlightLine={highlightLine}
+              onEditorReady={handleEditorReady}
             />
           ) : (
             <div className="flex items-center justify-center h-full text-gh-textSecondary">
