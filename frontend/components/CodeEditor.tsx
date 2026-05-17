@@ -101,8 +101,10 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
     }, [filename]);
 
     const doNavigate = useCallback((lineStart: number, lineEnd: number, pane?: 'original' | 'modified') => {
+      console.log('[navigateToLine] pane:', pane, 'lineStart:', lineStart, 'lineEnd:', lineEnd);
       const modEditor = editorRef.current?.getModifiedEditor();
       const origEditor = editorRef.current?.getOriginalEditor();
+      console.log('[navigateToLine] origEditor exists:', !!origEditor, 'modEditor exists:', !!modEditor);
       if (!modEditor || !origEditor) return;
       if (decorationRef.current) {
         modEditor.deltaDecorations(decorationRef.current, []);
@@ -118,7 +120,8 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
         origEditor.revealLineInCenter(lineStart);
         decorationOrigRef.current = origEditor.deltaDecorations([], decoration);
       } else {
-        modEditor.revealLineInCenter(lineStart);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        modEditor.revealLineInCenter(lineStart, 1 as any);
         decorationRef.current = modEditor.deltaDecorations([], decoration);
       }
     }, []);
@@ -177,18 +180,31 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
             }}
             onMount={(editor) => {
               editorRef.current = editor;
+
+              // Patch dispose to work around Monaco 0.55.x DiffEditor dispose-order bug:
+              // dispose() disposes TextModels before resetting the DiffEditorWidget model,
+              // causing "TextModel got disposed before DiffEditorWidget model got reset".
+              const origDispose = editor.dispose.bind(editor);
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (editor as any).dispose = () => {
+                try { editor.setModel(null); } catch {}
+                origDispose();
+              };
+
               const modEditor = editor.getModifiedEditor();
               const origEditor = editor.getOriginalEditor();
 
               function clearNavHighlight() {
-                if (decorationRef.current) {
-                  modEditor.deltaDecorations(decorationRef.current, []);
-                  decorationRef.current = null;
-                }
-                if (decorationOrigRef.current) {
-                  origEditor.deltaDecorations(decorationOrigRef.current, []);
-                  decorationOrigRef.current = null;
-                }
+                try {
+                  if (decorationRef.current) {
+                    modEditor.deltaDecorations(decorationRef.current, []);
+                    decorationRef.current = null;
+                  }
+                  if (decorationOrigRef.current) {
+                    origEditor.deltaDecorations(decorationOrigRef.current, []);
+                    decorationOrigRef.current = null;
+                  }
+                } catch {}
               }
 
               modEditor.onMouseDown(clearNavHighlight);

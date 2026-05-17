@@ -151,12 +151,16 @@ export default function CommentThread({
   onAdd,
   filename,
   onInlineCommentClick,
+  onDeleteInlineComment,
+  currentUserId,
 }: {
   comments: Comment[];
   onUpdate: (updated: Comment) => void;
   onAdd: (body: string) => Promise<void>;
   filename?: string;
   onInlineCommentClick?: (filename: string, lineStart: number, lineEnd: number, pane?: 'original' | 'modified') => void;
+  onDeleteInlineComment?: (commentId: string) => Promise<void>;
+  currentUserId?: string | null;
 }) {
   const [newBody, setNewBody] = useState('');
   const [loading, setLoading] = useState(false);
@@ -198,12 +202,26 @@ export default function CommentThread({
           </h3>
           {groups.map((group) => (
             <div key={`${group.filename}:${group.lineStart}:${group.lineEnd}`} className="flex flex-col gap-2">
-              <button
-                onClick={() => onInlineCommentClick?.(group.filename, group.lineStart, group.lineEnd, group.items[0]?.pane)}
-                className="text-xs font-mono text-gh-primary px-2 py-1 bg-gh-primary/10 rounded hover:bg-gh-primary/20 cursor-pointer w-full text-left transition-colors"
-              >
-                {group.filename} · {group.lineStart === group.lineEnd ? `Line ${group.lineStart}` : `Lines ${group.lineStart}–${group.lineEnd}`}
-              </button>
+              <div className="group flex items-center bg-gh-primary/10 rounded hover:bg-gh-primary/20 transition-colors">
+                <button
+                  onClick={() => { console.log('[chip click] pane:', group.items[0]?.pane, 'lineStart:', group.lineStart, 'lineEnd:', group.lineEnd); onInlineCommentClick?.(group.filename, group.lineStart, group.lineEnd, group.items[0]?.pane); }}
+                  className="flex-1 text-xs font-mono text-gh-primary px-2 py-1 cursor-pointer text-left"
+                >
+                  {group.filename} · {group.lineStart === group.lineEnd ? `Line ${group.lineStart}` : `Lines ${group.lineStart}–${group.lineEnd}`}
+                </button>
+                {onDeleteInlineComment && currentUserId && currentUserId === group.items[0]?.author._id && (
+                  <button
+                    onClick={() => onDeleteInlineComment(group.items[0]._id)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity mr-1.5 p-0.5 text-red-400 hover:text-red-300 cursor-pointer shrink-0"
+                    title="Delete comment thread"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                  </button>
+                )}
+              </div>
               {group.items.map((c) => (
                 <CommentItem key={c._id} comment={c} onUpdate={onUpdate} />
               ))}
