@@ -80,9 +80,12 @@ export default function ReviewPage() {
   );
 
   const handleInlineCommentClick = useCallback((filename: string, line: number) => {
-    setSelectedFile(filename);
+    console.log('Inline comment click — lineStart:', line);
+    if (filename !== selectedFile) {
+      setSelectedFile(filename);
+    }
     setHighlightLine(line);
-  }, []);
+  }, [selectedFile]);
 
   if (loading) {
     return (
