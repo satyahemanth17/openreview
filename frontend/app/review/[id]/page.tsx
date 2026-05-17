@@ -73,8 +73,8 @@ export default function ReviewPage() {
   );
 
   const handleAddLineComment = useCallback(
-    async (line: number, body: string) => {
-      await createComment(id ?? '', { filename: selectedFile ?? undefined, line, body });
+    async (lineStart: number, lineEnd: number, body: string) => {
+      await createComment(id ?? '', { filename: selectedFile ?? undefined, lineStart, lineEnd, body });
     },
     [id, selectedFile]
   );

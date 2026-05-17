@@ -41,7 +41,8 @@ export interface Comment {
   reviewId: string;
   author: Author;
   filename?: string;
-  line?: number;
+  lineStart?: number;
+  lineEnd?: number;
   body: string;
   resolved: boolean;
   replies: Reply[];
@@ -73,7 +74,7 @@ export const createReview = (data: { title: string; files: ReviewFile[] }) =>
   api.post<Review>('/reviews', data).then((r) => r.data);
 export const getComments = (reviewId: string) =>
   api.get<Comment[]>(`/comments/review/${reviewId}`).then((r) => r.data);
-export const createComment = (reviewId: string, data: { filename?: string; line?: number; body: string }) =>
+export const createComment = (reviewId: string, data: { filename?: string; lineStart?: number; lineEnd?: number; body: string }) =>
   api.post<Comment>(`/comments/review/${reviewId}`, data).then((r) => r.data);
 export const resolveComment = (commentId: string) =>
   api.put<Comment>(`/comments/${commentId}/resolve`).then((r) => r.data);

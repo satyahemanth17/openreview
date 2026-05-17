@@ -31,9 +31,10 @@ router.get('/review/:reviewId', async (req: Request, res: Response): Promise<voi
 // POST /review/:reviewId — create new comment
 router.post('/review/:reviewId', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { filename, line, body } = req.body as {
+    const { filename, lineStart, lineEnd, body } = req.body as {
       filename?: string;
-      line?: number;
+      lineStart?: number;
+      lineEnd?: number;
       body: string;
     };
 
@@ -44,7 +45,8 @@ router.post('/review/:reviewId', async (req: Request, res: Response): Promise<vo
       reviewId: req.params.reviewId,
       author: authorId,
       filename,
-      line,
+      lineStart,
+      lineEnd,
       body,
     });
     await comment.save();
