@@ -16,6 +16,7 @@ export default function ReviewPage() {
   const [activeReviewers, setActiveReviewers] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [highlightLine, setHighlightLine] = useState<number | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -78,6 +79,11 @@ export default function ReviewPage() {
     [id, selectedFile]
   );
 
+  const handleInlineCommentClick = useCallback((filename: string, line: number) => {
+    setSelectedFile(filename);
+    setHighlightLine(line);
+  }, []);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gh-bg">
@@ -128,7 +134,7 @@ export default function ReviewPage() {
               return (
                 <button
                   key={f.filename}
-                  onClick={() => setSelectedFile(f.filename)}
+                  onClick={() => { setSelectedFile(f.filename); setHighlightLine(null); }}
                   className={`w-full text-left px-2 py-1.5 rounded text-xs font-mono transition-colors ${
                     selectedFile === f.filename
                       ? 'bg-gh-primary/10 text-gh-primary'
@@ -156,6 +162,7 @@ export default function ReviewPage() {
               filename={currentFile.filename}
               patch={currentFile.patch}
               onAddLineComment={handleAddLineComment}
+              highlightLine={highlightLine}
             />
           ) : (
             <div className="flex items-center justify-center h-full text-gh-textSecondary">
@@ -171,6 +178,7 @@ export default function ReviewPage() {
             onUpdate={handleUpdateComment}
             onAdd={handleAddComment}
             filename={selectedFile ?? undefined}
+            onInlineCommentClick={handleInlineCommentClick}
           />
         </aside>
       </div>
