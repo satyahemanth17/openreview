@@ -54,7 +54,7 @@ function ensureDiffStyles() {
     '.monaco-diff-editor .char-insert span { color: #4ec94e !important; }',
     '.monaco-diff-editor .line-delete span { color: #f85149 !important; }',
     '.monaco-diff-editor .char-delete span { color: #f85149 !important; }',
-    '.openreview-highlight-line { background-color: rgba(255, 200, 0, 0.2) !important; }',
+    '.openreview-highlight-line { background-color: rgba(255, 105, 180, 0.35) !important; }',
     '.openreview-selection-overlay { background-color: rgba(66, 153, 225, 0.35) !important; }',
   ].join('\n');
   document.head.appendChild(style);
@@ -81,18 +81,25 @@ export default function CodeEditor({ filename, patch, onLineClick, onAddLineComm
   const editorRef = useRef<any>(null);
   const decorationRef = useRef<string[] | null>(null);
   const selectionDecorationRef = useRef<string[] | null>(null);
+  const selectionDecorationOrigRef = useRef<string[] | null>(null);
+  const fileChangedRef = useRef(false);
 
   useEffect(() => {
     ensureDiffStyles();
   }, []);
 
-  // Bug 3: setTimeout so the Monaco editor finishes loading the new file before scrolling
+  useEffect(() => {
+    fileChangedRef.current = true;
+  }, [filename]);
+
   useEffect(() => {
     if (decorationRef.current && editorRef.current) {
       editorRef.current.getModifiedEditor().deltaDecorations(decorationRef.current, []);
       decorationRef.current = null;
     }
     if (!highlightLine || !editorRef.current) return;
+    const needsDelay = fileChangedRef.current;
+    fileChangedRef.current = false;
     const timer = setTimeout(() => {
       if (!editorRef.current) return;
       const modEditor = editorRef.current.getModifiedEditor();
@@ -101,7 +108,7 @@ export default function CodeEditor({ filename, patch, onLineClick, onAddLineComm
         range: { startLineNumber: highlightLine, startColumn: 1, endLineNumber: highlightLine, endColumn: 1 },
         options: { isWholeLine: true, className: 'openreview-highlight-line' },
       }]);
-    }, 300);
+    }, needsDelay ? 600 : 0);
     return () => clearTimeout(timer);
   }, [highlightLine]);
 
@@ -157,14 +164,17 @@ export default function CodeEditor({ filename, patch, onLineClick, onAddLineComm
           onMount={(editor) => {
             editorRef.current = editor;
             const modEditor = editor.getModifiedEditor();
+            const origEditor = editor.getOriginalEditor();
 
-            // Clear navigation highlight on any click inside the editor
-            modEditor.onMouseDown(() => {
+            function clearNavHighlight() {
               if (decorationRef.current) {
                 modEditor.deltaDecorations(decorationRef.current, []);
                 decorationRef.current = null;
               }
-            });
+            }
+
+            modEditor.onMouseDown(clearNavHighlight);
+            origEditor.onMouseDown(clearNavHighlight);
 
             if (onLineClick) {
               modEditor.onMouseDown((e) => {
@@ -173,8 +183,6 @@ export default function CodeEditor({ filename, patch, onLineClick, onAddLineComm
               });
             }
 
-            // Bug 1: apply selection overlay decoration directly on the modified editor
-            // so it renders on top of green/red diff line backgrounds
             modEditor.onDidChangeCursorSelection((e) => {
               const sel = e.selection;
 
@@ -198,7 +206,6 @@ export default function CodeEditor({ filename, patch, onLineClick, onAddLineComm
                 );
               }
 
-              // Bug 2: capture full start+end line range, not just endLineNumber
               if (onAddLineComment) {
                 if (sel.isEmpty()) {
                   if (document.activeElement !== inputRef.current) setOverlay(null);
@@ -212,6 +219,31 @@ export default function CodeEditor({ filename, patch, onLineClick, onAddLineComm
                     setInputBody('');
                   }
                 }
+              }
+            });
+
+            // Bug 1: selection overlay on original (left) pane for red deleted lines
+            origEditor.onDidChangeCursorSelection((e) => {
+              const sel = e.selection;
+
+              if (sel.isEmpty()) {
+                if (selectionDecorationOrigRef.current) {
+                  origEditor.deltaDecorations(selectionDecorationOrigRef.current, []);
+                  selectionDecorationOrigRef.current = null;
+                }
+              } else {
+                selectionDecorationOrigRef.current = origEditor.deltaDecorations(
+                  selectionDecorationOrigRef.current ?? [],
+                  [{
+                    range: {
+                      startLineNumber: sel.startLineNumber,
+                      startColumn: sel.startColumn,
+                      endLineNumber: sel.endLineNumber,
+                      endColumn: sel.endColumn,
+                    },
+                    options: { className: 'openreview-selection-overlay', isWholeLine: true },
+                  }]
+                );
               }
             });
           }}
