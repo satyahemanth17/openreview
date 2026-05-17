@@ -88,12 +88,12 @@ export default function ReviewPage() {
     }
   }, []);
 
-  const handleInlineCommentClick = useCallback((filename: string, line: number) => {
-    pendingHighlightRef.current = { lineStart: line, lineEnd: line };
+  const handleInlineCommentClick = useCallback((filename: string, lineStart: number, lineEnd: number) => {
+    pendingHighlightRef.current = { lineStart, lineEnd };
     if (filename !== selectedFile) {
       setSelectedFile(filename);
     } else {
-      codeEditorRef.current?.navigateToLine(line, line);
+      codeEditorRef.current?.navigateToLine(lineStart, lineEnd);
       pendingHighlightRef.current = null;
     }
   }, [selectedFile]);

@@ -77,13 +77,14 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
     const { original, modified } = parsePatch(patch);
     const language = getLanguage(filename);
 
-    const [overlay, setOverlay] = useState<{ y: number; lineStart: number; lineEnd: number; pane: 'original' | 'modified' } | null>(null);
+    const [overlay, setOverlay] = useState<{ y: number; xRight: number; lineStart: number; lineEnd: number; pane: 'original' | 'modified' } | null>(null);
     const [showInput, setShowInput] = useState(false);
     const [inputBody, setInputBody] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const inputRef = useRef<HTMLTextAreaElement>(null);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const editorRef = useRef<any>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
     const decorationRef = useRef<string[] | null>(null);
     const selectionDecorationRef = useRef<string[] | null>(null);
     const selectionDecorationOrigRef = useRef<string[] | null>(null);
@@ -132,7 +133,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
         <div className="flex items-center gap-2 px-3 py-2 bg-gh-surface border-b border-gh-border">
           <span className="text-xs font-mono text-gh-textSecondary">{filename}</span>
         </div>
-        <div className="flex-1 relative">
+        <div className="flex-1 relative" ref={containerRef}>
           <MonacoDiffEditor
             key={filename}
             height="100%"
@@ -215,9 +216,9 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
                   } else {
                     const lineStart = sel.startLineNumber;
                     const lineEnd = sel.endLineNumber;
-                    const pos = modEditor.getScrolledVisiblePosition({ lineNumber: lineEnd, column: 1 });
+                    const pos = modEditor.getScrolledVisiblePosition({ lineNumber: lineStart, column: 1 });
                     if (pos) {
-                      setOverlay({ y: pos.top, lineStart, lineEnd, pane: 'modified' });
+                      setOverlay({ y: pos.top, xRight: 0, lineStart, lineEnd, pane: 'modified' });
                       setShowInput(false);
                       setInputBody('');
                     }
@@ -257,11 +258,13 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
                     const pos = origEditor.getScrolledVisiblePosition({ lineNumber: lineStart, column: 1 });
                     if (pos) {
                       const origDom = origEditor.getDomNode();
-                      const diffDom = editorRef.current?.getDomNode?.();
-                      const origOffset = (origDom && diffDom)
-                        ? origDom.getBoundingClientRect().top - diffDom.getBoundingClientRect().top
+                      const containerRect = containerRef.current?.getBoundingClientRect();
+                      const origRect = origDom?.getBoundingClientRect();
+                      // xRight = distance from right edge of orig pane to right edge of container
+                      const xRight = (containerRect && origRect)
+                        ? containerRect.right - origRect.right
                         : 0;
-                      setOverlay({ y: origOffset + pos.top, lineStart, lineEnd, pane: 'original' });
+                      setOverlay({ y: pos.top, xRight, lineStart, lineEnd, pane: 'original' });
                       setShowInput(false);
                       setInputBody('');
                     }
@@ -274,7 +277,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
           />
 
           {overlay && onAddLineComment && (
-            <div style={{ position: 'absolute', top: Math.max(0, overlay.y), right: 0, zIndex: 20 }}>
+            <div style={{ position: 'absolute', top: Math.max(0, overlay.y), right: overlay.xRight, zIndex: 20 }}>
               {!showInput ? (
                 <button
                   onClick={() => setShowInput(true)}
