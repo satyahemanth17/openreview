@@ -149,11 +149,13 @@ export default function CommentThread({
   onUpdate,
   onAdd,
   filename,
+  onInlineCommentClick,
 }: {
   comments: Comment[];
   onUpdate: (updated: Comment) => void;
   onAdd: (body: string) => Promise<void>;
   filename?: string;
+  onInlineCommentClick?: (filename: string, line: number) => void;
 }) {
   const [newBody, setNewBody] = useState('');
   const [loading, setLoading] = useState(false);
@@ -195,9 +197,12 @@ export default function CommentThread({
           </h3>
           {groups.map((group) => (
             <div key={`${group.filename}:${group.line}`} className="flex flex-col gap-2">
-              <p className="text-xs font-mono text-gh-primary px-2 py-1 bg-gh-primary/10 rounded">
+              <button
+                onClick={() => onInlineCommentClick?.(group.filename, group.line)}
+                className="text-xs font-mono text-gh-primary px-2 py-1 bg-gh-primary/10 rounded hover:bg-gh-primary/20 cursor-pointer w-full text-left transition-colors"
+              >
                 {group.filename} · Line {group.line}
-              </p>
+              </button>
               {group.items.map((c) => (
                 <CommentItem key={c._id} comment={c} onUpdate={onUpdate} />
               ))}

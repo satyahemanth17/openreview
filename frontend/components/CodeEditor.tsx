@@ -55,6 +55,7 @@ function ensureDiffStyles() {
     '.monaco-diff-editor .char-insert span { color: #4ec94e !important; }',
     '.monaco-diff-editor .line-delete span { color: #f85149 !important; }',
     '.monaco-diff-editor .char-delete span { color: #f85149 !important; }',
+    '.openreview-highlight-line { background-color: rgba(255, 200, 0, 0.2) !important; }',
   ].join('\n');
   document.head.appendChild(style);
 }
@@ -64,9 +65,10 @@ interface CodeEditorProps {
   patch: string;
   onLineClick?: (line: number) => void;
   onAddLineComment?: (line: number, body: string) => Promise<void>;
+  highlightLine?: number | null;
 }
 
-export default function CodeEditor({ filename, patch, onLineClick, onAddLineComment }: CodeEditorProps) {
+export default function CodeEditor({ filename, patch, onLineClick, onAddLineComment, highlightLine }: CodeEditorProps) {
   const { original, modified } = parsePatch(patch);
   const language = getLanguage(filename);
 
@@ -75,10 +77,27 @@ export default function CodeEditor({ filename, patch, onLineClick, onAddLineComm
   const [inputBody, setInputBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const editorRef = useRef<any>(null);
+  const decorationRef = useRef<string[] | null>(null);
 
   useEffect(() => {
     ensureDiffStyles();
   }, []);
+
+  useEffect(() => {
+    if (decorationRef.current && editorRef.current) {
+      editorRef.current.getModifiedEditor().deltaDecorations(decorationRef.current, []);
+      decorationRef.current = null;
+    }
+    if (!highlightLine || !editorRef.current) return;
+    const modEditor = editorRef.current.getModifiedEditor();
+    modEditor.revealLineInCenter(highlightLine);
+    decorationRef.current = modEditor.deltaDecorations([], [{
+      range: { startLineNumber: highlightLine, startColumn: 1, endLineNumber: highlightLine, endColumn: 1 },
+      options: { isWholeLine: true, className: 'openreview-highlight-line' },
+    }]);
+  }, [highlightLine]);
 
   async function handleSubmit() {
     if (!overlay || !inputBody.trim() || !onAddLineComment || submitting) return;
@@ -126,10 +145,19 @@ export default function CodeEditor({ filename, patch, onLineClick, onAddLineComm
                 'diffEditorGutter.removedLineBackground': '#4a2d2d',
                 'diffEditor.insertedTextBackground': '#1a2e1a80',
                 'diffEditor.removedTextBackground': '#2e1a1a80',
+                'editor.selectionBackground': '#4299e14d',
+                'editor.inactiveSelectionBackground': '#4299e133',
               },
             });
           }}
           onMount={(editor) => {
+            editorRef.current = editor;
+            editor.getModifiedEditor().onMouseDown(() => {
+              if (decorationRef.current) {
+                editor.getModifiedEditor().deltaDecorations(decorationRef.current, []);
+                decorationRef.current = null;
+              }
+            });
             if (onLineClick) {
               editor.getModifiedEditor().onMouseDown((e) => {
                 const lineNumber = e.target.position?.lineNumber;
