@@ -107,7 +107,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
       }
       modEditor.revealLineInCenter(lineStart);
       decorationRef.current = modEditor.deltaDecorations([], [{
-        range: { startLineNumber: lineStart, startColumn: 1, endLineNumber: lineEnd, endColumn: 1 },
+        range: { startLineNumber: lineStart, startColumn: 1, endLineNumber: lineEnd, endColumn: Number.MAX_VALUE },
         options: { isWholeLine: true, className: 'openreview-highlight-line' },
       }]);
     }, []);
@@ -254,9 +254,14 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
                   } else {
                     const lineStart = sel.startLineNumber;
                     const lineEnd = sel.endLineNumber;
-                    const pos = origEditor.getScrolledVisiblePosition({ lineNumber: lineEnd, column: 1 });
+                    const pos = origEditor.getScrolledVisiblePosition({ lineNumber: lineStart, column: 1 });
                     if (pos) {
-                      setOverlay({ y: pos.top, lineStart, lineEnd, pane: 'original' });
+                      const origDom = origEditor.getDomNode();
+                      const diffDom = editorRef.current?.getDomNode?.();
+                      const origOffset = (origDom && diffDom)
+                        ? origDom.getBoundingClientRect().top - diffDom.getBoundingClientRect().top
+                        : 0;
+                      setOverlay({ y: origOffset + pos.top, lineStart, lineEnd, pane: 'original' });
                       setShowInput(false);
                       setInputBody('');
                     }
