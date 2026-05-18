@@ -4,7 +4,6 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'OpenReview',
   description: 'Real-time collaborative code review',
-  icons: { icon: '/favicon.svg' },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
