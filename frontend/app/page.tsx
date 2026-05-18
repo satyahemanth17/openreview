@@ -335,8 +335,8 @@ export default function HomePage() {
         <div style={{ position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', justifyContent: 'center', padding: '0 24px 48px' }}>
           {([
             { label: 'Real-time Sync', cls: 'bp1' },
-            { label: 'Monaco Diff Editor', cls: 'bp2' },
-            { label: 'GitHub OAuth', cls: 'bp3' },
+            { label: 'AI Code Review', cls: 'bp2' },
+            { label: 'Monaco Diff Editor', cls: 'bp3' },
           ] as const).map(({ label, cls }) => (
             <div
               key={label}
