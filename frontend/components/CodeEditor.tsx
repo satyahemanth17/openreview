@@ -93,7 +93,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
     const origEditorRef = useRef<any>(null);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const monacoRef = useRef<any>(null);
-    const navIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const isFirstRenderRef = useRef(true);
 
     useEffect(() => {
       ensureDiffStyles();
@@ -106,10 +106,15 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
     }, [filename]);
 
     useEffect(() => {
-      return () => {
-        if (navIntervalRef.current) clearInterval(navIntervalRef.current);
-      };
-    }, []);
+      if (isFirstRenderRef.current) {
+        isFirstRenderRef.current = false;
+        return;
+      }
+      const timer = setTimeout(() => {
+        onEditorReady?.();
+      }, 150);
+      return () => clearTimeout(timer);
+    }, [filename, onEditorReady]);
 
     const doNavigate = useCallback((lineStart: number, lineEnd: number, pane?: 'original' | 'modified') => {
       console.log('[navigateToLine] pane:', pane, 'lineStart:', lineStart, 'lineEnd:', lineEnd);
@@ -128,32 +133,15 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
       const range = { startLineNumber: lineStart, startColumn: 1, endLineNumber: lineEnd, endColumn: Number.MAX_VALUE };
       const decoration = [{ range, options: { isWholeLine: true, className: 'openreview-highlight-line' } }];
       if (pane === 'original') {
-        if (navIntervalRef.current) clearInterval(navIntervalRef.current);
-        let attempts = 0;
-        const maxAttempts = 10;
-        navIntervalRef.current = setInterval(() => {
-          attempts++;
-          try {
-            const editor = origEditorRef.current;
-            if (!editor) {
-              if (attempts >= maxAttempts) { clearInterval(navIntervalRef.current!); navIntervalRef.current = null; }
-              return;
-            }
-            editor.focus();
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            editor.revealLineInCenter(lineStart, 1 as any);
-            decorationOrigRef.current = editor.deltaDecorations([], [{
-              range: monacoRef.current
-                ? new monacoRef.current.Range(lineStart, 1, lineEnd, Number.MAX_VALUE)
-                : { startLineNumber: lineStart, startColumn: 1, endLineNumber: lineEnd, endColumn: Number.MAX_VALUE },
-              options: { isWholeLine: true, className: 'openreview-highlight-line' },
-            }]);
-            clearInterval(navIntervalRef.current!);
-            navIntervalRef.current = null;
-          } catch {
-            if (attempts >= maxAttempts) { clearInterval(navIntervalRef.current!); navIntervalRef.current = null; }
-          }
-        }, 50);
+        origEditor.focus();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        origEditor.revealLineInCenter(lineStart, 1 as any);
+        decorationOrigRef.current = origEditor.deltaDecorations([], [{
+          range: monacoRef.current
+            ? new monacoRef.current.Range(lineStart, 1, lineEnd, Number.MAX_VALUE)
+            : { startLineNumber: lineStart, startColumn: 1, endLineNumber: lineEnd, endColumn: Number.MAX_VALUE },
+          options: { isWholeLine: true, className: 'openreview-highlight-line' },
+        }]);
       } else {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         modEditor.revealLineInCenter(lineStart, 1 as any);
@@ -183,7 +171,6 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
         </div>
         <div className="flex-1 relative" ref={containerRef}>
           <MonacoDiffEditor
-            key={filename}
             height="100%"
             language={language}
             theme="openreview-dark"
