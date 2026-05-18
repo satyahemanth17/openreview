@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import CodeEditor, { CodeEditorHandle } from '../../../components/CodeEditor';
 import CommentThread from '../../../components/CommentThread';
-import AIReviewPanel from '../../../components/AIReviewPanel';
+import AISidebar from '../../../components/AISidebar';
 import { Review, Comment, getReview, getComments, createComment, deleteComment } from '../../../lib/api';
 import { joinReview, leaveReview, getSocket, resetSocket } from '../../../lib/socket';
 
@@ -160,6 +160,17 @@ export default function ReviewPage() {
             {activeReviewers.join(', ')}
           </div>
         )}
+        <button
+          onClick={() => setShowAI((v) => !v)}
+          className={`text-xs px-2.5 py-1 rounded border transition-colors cursor-pointer shrink-0 ${
+            showAI
+              ? 'bg-gh-primary/20 border-gh-primary text-gh-primary'
+              : 'border-gh-border text-gh-textSecondary hover:text-gh-primary hover:border-gh-primary'
+          }`}
+          title="Toggle AI review"
+        >
+          ✨ Ask AI
+        </button>
         {username && (
           <div className="flex items-center gap-2 pl-3 border-l border-gh-border shrink-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -176,53 +187,44 @@ export default function ReviewPage() {
         )}
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* File tree */}
-        <aside className="w-56 border-r border-gh-border bg-gh-surface overflow-y-auto shrink-0">
-          <div className="p-2">
-            <div className="flex items-center justify-between px-2 py-1">
-              <p className="text-xs font-semibold text-gh-textSecondary uppercase tracking-wide">Files</p>
-              <button
-                onClick={() => setShowAI((v) => !v)}
-                className={`text-xs px-2 py-0.5 rounded border transition-colors cursor-pointer ${
-                  showAI
-                    ? 'bg-gh-primary/20 border-gh-primary text-gh-primary'
-                    : 'border-gh-border text-gh-textSecondary hover:text-gh-primary hover:border-gh-primary'
-                }`}
-                title="Toggle AI review"
-              >
-                ✨ Ask AI
-              </button>
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Main 3-panel layout — shrinks to accommodate sidebar */}
+        <div
+          className="flex flex-1 overflow-hidden transition-all duration-300 ease-in-out"
+          style={{ marginRight: showAI ? '380px' : '0' }}
+        >
+          {/* File tree */}
+          <aside className="w-56 border-r border-gh-border bg-gh-surface overflow-y-auto shrink-0">
+            <div className="p-2">
+              <p className="px-2 py-1 text-xs font-semibold text-gh-textSecondary uppercase tracking-wide">Files</p>
+              {review.files.map((f) => {
+                const commentCount = comments.filter((c) => c.filename === f.filename).length;
+                return (
+                  <button
+                    key={f.filename}
+                    onClick={() => { pendingHighlightRef.current = null; setSelectedFile(f.filename); }}
+                    className={`w-full text-left px-2 py-1.5 rounded text-xs font-mono transition-colors ${
+                      selectedFile === f.filename
+                        ? 'bg-gh-primary/10 text-gh-primary'
+                        : 'text-gh-textSecondary hover:text-gh-textPrimary hover:bg-white/5'
+                    }`}
+                  >
+                    <span className="truncate block">{f.filename}</span>
+                    <span className="text-xs">
+                      <span className="text-gh-success">+{f.additions}</span>{' '}
+                      <span className="text-red-400">-{f.deletions}</span>
+                      {commentCount > 0 && (
+                        <span className="ml-1 text-gh-primary">💬{commentCount}</span>
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
-            {review.files.map((f) => {
-              const commentCount = comments.filter((c) => c.filename === f.filename).length;
-              return (
-                <button
-                  key={f.filename}
-                  onClick={() => { pendingHighlightRef.current = null; setSelectedFile(f.filename); }}
-                  className={`w-full text-left px-2 py-1.5 rounded text-xs font-mono transition-colors ${
-                    selectedFile === f.filename
-                      ? 'bg-gh-primary/10 text-gh-primary'
-                      : 'text-gh-textSecondary hover:text-gh-textPrimary hover:bg-white/5'
-                  }`}
-                >
-                  <span className="truncate block">{f.filename}</span>
-                  <span className="text-xs">
-                    <span className="text-gh-success">+{f.additions}</span>{' '}
-                    <span className="text-red-400">-{f.deletions}</span>
-                    {commentCount > 0 && (
-                      <span className="ml-1 text-gh-primary">💬{commentCount}</span>
-                    )}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </aside>
+          </aside>
 
-        {/* Editor */}
-        <main className="flex-1 overflow-hidden flex flex-col">
-          <div className="flex-1 overflow-hidden">
+          {/* Editor */}
+          <main className="flex-1 overflow-hidden">
             {currentFile ? (
               <CodeEditor
                 ref={codeEditorRef}
@@ -236,26 +238,29 @@ export default function ReviewPage() {
                 Select a file to view
               </div>
             )}
-          </div>
-          <AIReviewPanel
-            filename={selectedFile}
-            patch={currentFile?.patch ?? null}
-            open={showAI}
-          />
-        </main>
+          </main>
 
-        {/* Comments panel */}
-        <aside className="w-80 border-l border-gh-border bg-gh-surface overflow-y-auto shrink-0 p-3">
-          <CommentThread
-            comments={comments}
-            onUpdate={handleUpdateComment}
-            onAdd={handleAddComment}
-            filename={selectedFile ?? undefined}
-            onInlineCommentClick={handleInlineCommentClick}
-            onDeleteInlineComment={handleDeleteComment}
-            currentUserId={currentUserId}
-          />
-        </aside>
+          {/* Comments panel */}
+          <aside className="w-80 border-l border-gh-border bg-gh-surface overflow-y-auto shrink-0 p-3">
+            <CommentThread
+              comments={comments}
+              onUpdate={handleUpdateComment}
+              onAdd={handleAddComment}
+              filename={selectedFile ?? undefined}
+              onInlineCommentClick={handleInlineCommentClick}
+              onDeleteInlineComment={handleDeleteComment}
+              currentUserId={currentUserId}
+            />
+          </aside>
+        </div>
+
+        {/* AI Sidebar */}
+        <AISidebar
+          filename={selectedFile}
+          patch={currentFile?.patch ?? null}
+          open={showAI}
+          onClose={() => setShowAI(false)}
+        />
       </div>
     </div>
   );
