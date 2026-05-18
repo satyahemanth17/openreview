@@ -261,12 +261,6 @@ export default function HomePage() {
                 <p style={{ fontSize: 11, color: '#c9d1d9', margin: 0 }}>Use env var instead of hardcoded localhost ✓</p>
               </div>
             </div>
-            {/* "OpenReview" text floating over the faded right edge */}
-            <div style={{ position: 'absolute', top: 0, bottom: 0, right: 0, width: '40%', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-              <span style={{ fontSize: 30, fontWeight: 900, color: 'rgba(201,209,217,0.18)', letterSpacing: '-1.5px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', userSelect: 'none', whiteSpace: 'nowrap' }}>
-                OpenReview
-              </span>
-            </div>
           </div>
 
           {/* Glassmorphism login card */}
