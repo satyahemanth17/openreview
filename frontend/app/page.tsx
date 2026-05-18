@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import ReviewCard from '../components/ReviewCard';
 import { Review, ReviewFile, GithubFile, getReviews, createReview, getPRDetails, getPRFiles } from '../lib/api';
+import { resetSocket } from '../lib/socket';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api').replace(/\/api$/, '');
 
@@ -51,6 +52,7 @@ type Particle = {
 
 export default function HomePage() {
   const [token, setToken] = useState<string | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [showImport, setShowImport] = useState(false);
@@ -65,6 +67,10 @@ export default function HomePage() {
     const t = localStorage.getItem('token');
     setToken(t);
     if (t) {
+      try {
+        const payload = JSON.parse(atob(t.split('.')[1]));
+        setUsername(payload.username ?? null);
+      } catch {}
       getReviews()
         .then(setReviews)
         .catch((err) => console.error('Failed to load reviews:', err))
@@ -131,15 +137,15 @@ export default function HomePage() {
     const rect = card.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
-    const rx = ((e.clientY - cy) / (window.innerHeight / 2)) * -6;
-    const ry = ((e.clientX - cx) / (window.innerWidth / 2)) * 10;
-    card.style.transform = `perspective(900px) rotateX(${rx}deg) rotateY(${ry}deg) scale(1.01)`;
+    const rx = ((e.clientY - cy) / (window.innerHeight / 2)) * -4;
+    const ry = ((e.clientX - cx) / (window.innerWidth / 2)) * 6;
+    card.style.transform = `perspective(1000px) rotateY(${45 + ry}deg) rotateX(${rx}deg) scale(1.01)`;
   }, []);
 
   const handleMouseLeave = useCallback(() => {
     const card = heroCardRef.current;
     if (!card) return;
-    card.style.transform = 'perspective(900px) rotateX(2deg) rotateY(-4deg) scale(1)';
+    card.style.transform = 'perspective(1000px) rotateY(45deg) scale(1)';
   }, []);
 
   // Add/remove tilt listeners only when on the login page
@@ -210,14 +216,14 @@ export default function HomePage() {
         <div style={{ position: 'fixed', inset: 0, zIndex: 1, pointerEvents: 'none', background: 'radial-gradient(ellipse 70% 55% at 50% 50%, rgba(88,166,255,0.065) 0%, rgba(62,207,142,0.04) 45%, transparent 70%)' }} />
 
         {/* Main content */}
-        <div className="hero-row" style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 48, padding: '40px 24px', width: '100%', maxWidth: 960, margin: '0 auto' }}>
+        <div className="hero-row" style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 48, padding: '40px 24px', width: '100%', maxWidth: 1100, margin: '0 auto' }}>
 
           {/* 3D mock Monaco diff card */}
           <div
             ref={heroCardRef}
-            style={{ transform: 'perspective(900px) rotateX(2deg) rotateY(-4deg)', transition: 'transform 0.15s ease-out', transformStyle: 'preserve-3d', flexShrink: 0, width: '100%', maxWidth: 440 }}
+            style={{ transform: 'perspective(1000px) rotateY(45deg)', transition: 'transform 0.15s ease-out', transformStyle: 'preserve-3d', flexShrink: 0, width: '100%', maxWidth: 616, position: 'relative' }}
           >
-            <div style={{ background: 'rgba(22,27,34,0.97)', border: '1px solid rgba(48,54,61,0.9)', borderRadius: 12, boxShadow: '0 40px 90px rgba(0,0,0,0.65), 0 0 0 1px rgba(88,166,255,0.07), inset 0 1px 0 rgba(255,255,255,0.04)', overflow: 'hidden' }}>
+            <div style={{ background: 'rgba(22,27,34,0.97)', border: '1px solid rgba(48,54,61,0.9)', borderRadius: 12, boxShadow: '0 40px 90px rgba(0,0,0,0.65), 0 0 0 1px rgba(88,166,255,0.07), inset 0 1px 0 rgba(255,255,255,0.04)', overflow: 'hidden', WebkitMaskImage: 'linear-gradient(to right, black 60%, transparent 100%)', maskImage: 'linear-gradient(to right, black 60%, transparent 100%)' }}>
               {/* Window chrome */}
               <div style={{ background: '#161b22', borderBottom: '1px solid #30363d', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{ display: 'flex', gap: 6 }}>
@@ -254,6 +260,12 @@ export default function HomePage() {
                 </div>
                 <p style={{ fontSize: 11, color: '#c9d1d9', margin: 0 }}>Use env var instead of hardcoded localhost ✓</p>
               </div>
+            </div>
+            {/* "OpenReview" text floating over the faded right edge */}
+            <div style={{ position: 'absolute', top: 0, bottom: 0, right: 0, width: '40%', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+              <span style={{ fontSize: 30, fontWeight: 900, color: 'rgba(201,209,217,0.18)', letterSpacing: '-1.5px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', userSelect: 'none', whiteSpace: 'nowrap' }}>
+                OpenReview
+              </span>
             </div>
           </div>
 
@@ -359,12 +371,27 @@ export default function HomePage() {
     <div className="min-h-screen bg-gh-bg">
       <header className="border-b border-gh-border bg-gh-surface px-6 py-3 flex items-center justify-between">
         <h1 className="font-bold text-gh-textPrimary">OpenReview</h1>
-        <button
-          onClick={() => setShowImport(true)}
-          className="px-4 py-1.5 bg-[#3ecf8e] text-[#0f1117] text-sm font-medium rounded-md hover:opacity-90 cursor-pointer"
-        >
-          Import PR
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowImport(true)}
+            className="px-4 py-1.5 bg-[#3ecf8e] text-[#0f1117] text-sm font-medium rounded-md hover:opacity-90 cursor-pointer"
+          >
+            Import PR
+          </button>
+          {username && (
+            <div className="flex items-center gap-2 pl-3 border-l border-gh-border">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`https://github.com/${username}.png?size=32`} alt="" className="w-6 h-6 rounded-full" />
+              <span className="text-xs text-gh-textSecondary">{username}</span>
+              <button
+                onClick={() => { localStorage.removeItem('token'); resetSocket(); window.location.href = 'http://localhost:3001'; }}
+                className="text-xs text-gh-textSecondary hover:text-red-400 cursor-pointer transition-colors"
+              >
+                Sign out
+              </button>
+            </div>
+          )}
+        </div>
       </header>
 
       <main className="max-w-3xl mx-auto px-6 py-8">

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import CodeEditor, { CodeEditorHandle } from '../../../components/CodeEditor';
 import CommentThread from '../../../components/CommentThread';
 import { Review, Comment, getReview, getComments, createComment, deleteComment } from '../../../lib/api';
-import { joinReview, leaveReview, getSocket } from '../../../lib/socket';
+import { joinReview, leaveReview, getSocket, resetSocket } from '../../../lib/socket';
 
 export default function ReviewPage() {
   const { id } = useParams<{ id: string }>();
@@ -15,6 +15,7 @@ export default function ReviewPage() {
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [activeReviewers, setActiveReviewers] = useState<string[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const codeEditorRef = useRef<CodeEditorHandle | null>(null);
@@ -26,6 +27,7 @@ export default function ReviewPage() {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
         setCurrentUserId(payload._id ?? payload.id ?? null);
+        setUsername(payload.username ?? null);
       } catch {}
     }
   }, []);
@@ -154,6 +156,20 @@ export default function ReviewPage() {
           <div className="flex items-center gap-1 text-xs text-gh-textSecondary">
             <span className="w-2 h-2 rounded-full bg-gh-success inline-block" />
             {activeReviewers.join(', ')}
+          </div>
+        )}
+        {username && (
+          <div className="flex items-center gap-2 pl-3 border-l border-gh-border shrink-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`https://github.com/${username}.png?size=32`} alt="" className="w-6 h-6 rounded-full" />
+            <span className="text-xs text-gh-textSecondary hidden sm:inline">{username}</span>
+            <button
+              onClick={() => { localStorage.removeItem('token'); resetSocket(); window.location.href = 'http://localhost:3001'; }}
+              className="text-xs text-gh-textSecondary hover:text-red-400 cursor-pointer transition-colors"
+              title="Sign out"
+            >
+              Sign out
+            </button>
           </div>
         )}
       </header>
