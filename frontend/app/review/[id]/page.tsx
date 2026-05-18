@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import CodeEditor, { CodeEditorHandle } from '../../../components/CodeEditor';
 import CommentThread from '../../../components/CommentThread';
+import AIReviewPanel from '../../../components/AIReviewPanel';
 import { Review, Comment, getReview, getComments, createComment, deleteComment } from '../../../lib/api';
 import { joinReview, leaveReview, getSocket, resetSocket } from '../../../lib/socket';
 
@@ -18,6 +19,7 @@ export default function ReviewPage() {
   const [username, setUsername] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [showAI, setShowAI] = useState(false);
   const codeEditorRef = useRef<CodeEditorHandle | null>(null);
   const pendingHighlightRef = useRef<{ lineStart: number; lineEnd: number; pane?: 'original' | 'modified' } | null>(null);
 
@@ -178,7 +180,20 @@ export default function ReviewPage() {
         {/* File tree */}
         <aside className="w-56 border-r border-gh-border bg-gh-surface overflow-y-auto shrink-0">
           <div className="p-2">
-            <p className="text-xs font-semibold text-gh-textSecondary uppercase tracking-wide px-2 py-1">Files</p>
+            <div className="flex items-center justify-between px-2 py-1">
+              <p className="text-xs font-semibold text-gh-textSecondary uppercase tracking-wide">Files</p>
+              <button
+                onClick={() => setShowAI((v) => !v)}
+                className={`text-xs px-2 py-0.5 rounded border transition-colors cursor-pointer ${
+                  showAI
+                    ? 'bg-gh-primary/20 border-gh-primary text-gh-primary'
+                    : 'border-gh-border text-gh-textSecondary hover:text-gh-primary hover:border-gh-primary'
+                }`}
+                title="Toggle AI review"
+              >
+                ✨ Ask AI
+              </button>
+            </div>
             {review.files.map((f) => {
               const commentCount = comments.filter((c) => c.filename === f.filename).length;
               return (
@@ -206,20 +221,27 @@ export default function ReviewPage() {
         </aside>
 
         {/* Editor */}
-        <main className="flex-1 overflow-hidden">
-          {currentFile ? (
-            <CodeEditor
-              ref={codeEditorRef}
-              filename={currentFile.filename}
-              patch={currentFile.patch}
-              onAddLineComment={handleAddLineComment}
-              onEditorReady={handleEditorReady}
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full text-gh-textSecondary">
-              Select a file to view
-            </div>
-          )}
+        <main className="flex-1 overflow-hidden flex flex-col">
+          <div className="flex-1 overflow-hidden">
+            {currentFile ? (
+              <CodeEditor
+                ref={codeEditorRef}
+                filename={currentFile.filename}
+                patch={currentFile.patch}
+                onAddLineComment={handleAddLineComment}
+                onEditorReady={handleEditorReady}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full text-gh-textSecondary">
+                Select a file to view
+              </div>
+            )}
+          </div>
+          <AIReviewPanel
+            filename={selectedFile}
+            patch={currentFile?.patch ?? null}
+            open={showAI}
+          />
         </main>
 
         {/* Comments panel */}

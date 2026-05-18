@@ -8,6 +8,7 @@ import authRouter from './routes/auth';
 import reviewsRouter from './routes/reviews';
 import commentsRouter from './routes/comments';
 import githubRouter from './routes/github';
+import aiRouter from './routes/ai';
 import { registerSocketHandlers } from './socket/handlers';
 import { setIO } from './routes/comments';
 
@@ -34,6 +35,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/reviews', reviewsRouter);
 app.use('/api/comments', commentsRouter);
 app.use('/api/github', githubRouter);
+app.use('/api/ai', aiRouter);
 
 // Health check
 app.get('/health', (_req, res) => {
