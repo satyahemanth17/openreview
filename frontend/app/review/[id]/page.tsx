@@ -20,6 +20,7 @@ export default function ReviewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [showAI, setShowAI] = useState(false);
+  const [showComments, setShowComments] = useState(true);
   const codeEditorRef = useRef<CodeEditorHandle | null>(null);
   const pendingHighlightRef = useRef<{ lineStart: number; lineEnd: number; pane?: 'original' | 'modified' } | null>(null);
 
@@ -104,6 +105,14 @@ export default function ReviewPage() {
     [id, selectedFile]
   );
 
+  const handleToggleAI = useCallback(() => {
+    setShowAI((prev) => {
+      const next = !prev;
+      setShowComments(!next);
+      return next;
+    });
+  }, []);
+
   const handleEditorReady = useCallback(() => {
     if (pendingHighlightRef.current) {
       const { lineStart, lineEnd, pane } = pendingHighlightRef.current;
@@ -161,7 +170,7 @@ export default function ReviewPage() {
           </div>
         )}
         <button
-          onClick={() => setShowAI((v) => !v)}
+          onClick={handleToggleAI}
           className={`text-xs px-2.5 py-1 rounded border transition-colors cursor-pointer shrink-0 ${
             showAI
               ? 'bg-gh-primary/20 border-gh-primary text-gh-primary'
@@ -224,7 +233,7 @@ export default function ReviewPage() {
           </aside>
 
           {/* Editor */}
-          <main className="flex-1 overflow-hidden">
+          <main className="flex-1 overflow-hidden relative">
             {currentFile ? (
               <CodeEditor
                 ref={codeEditorRef}
@@ -238,19 +247,36 @@ export default function ReviewPage() {
                 Select a file to view
               </div>
             )}
+            {!showComments && (
+              <button
+                onClick={() => { setShowComments(true); setShowAI(false); }}
+                className="absolute right-0 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1 bg-gh-surface border border-gh-border rounded-l-lg px-1.5 py-3 text-gh-textSecondary hover:text-gh-textPrimary transition-colors cursor-pointer z-10"
+                title="Show comments"
+              >
+                <span className="text-sm">💬</span>
+                <span className="text-xs font-mono">
+                  {comments.filter((c) => c.filename === selectedFile).length}
+                </span>
+              </button>
+            )}
           </main>
 
-          {/* Comments panel */}
-          <aside className="w-80 border-l border-gh-border bg-gh-surface overflow-y-auto shrink-0 p-3">
-            <CommentThread
-              comments={comments}
-              onUpdate={handleUpdateComment}
-              onAdd={handleAddComment}
-              filename={selectedFile ?? undefined}
-              onInlineCommentClick={handleInlineCommentClick}
-              onDeleteInlineComment={handleDeleteComment}
-              currentUserId={currentUserId}
-            />
+          {/* Comments panel — collapses when AI sidebar opens */}
+          <aside
+            className="border-l border-gh-border bg-gh-surface shrink-0 overflow-hidden transition-all duration-300 ease-in-out"
+            style={{ width: showComments ? '320px' : '0' }}
+          >
+            <div className="w-80 h-full overflow-y-auto p-3">
+              <CommentThread
+                comments={comments}
+                onUpdate={handleUpdateComment}
+                onAdd={handleAddComment}
+                filename={selectedFile ?? undefined}
+                onInlineCommentClick={handleInlineCommentClick}
+                onDeleteInlineComment={handleDeleteComment}
+                currentUserId={currentUserId}
+              />
+            </div>
           </aside>
         </div>
 
@@ -259,7 +285,7 @@ export default function ReviewPage() {
           filename={selectedFile}
           patch={currentFile?.patch ?? null}
           open={showAI}
-          onClose={() => setShowAI(false)}
+          onClose={() => { setShowAI(false); setShowComments(true); }}
         />
       </div>
     </div>
