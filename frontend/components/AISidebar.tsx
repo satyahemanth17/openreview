@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 interface Message {
   id: number;
@@ -11,18 +11,20 @@ interface Message {
 interface AISidebarProps {
   filename: string | null;
   patch: string | null;
-  open: boolean;
   onClose: () => void;
 }
 
-export default function AISidebar({ filename, patch, open, onClose }: AISidebarProps) {
+export default function AISidebar({ filename, patch, onClose }: AISidebarProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('Review this diff');
   const [loading, setLoading] = useState(false);
   const [pendingText, setPendingText] = useState('');
   const [displayedText, setDisplayedText] = useState('');
+  const [sidebarWidth, setSidebarWidth] = useState(380);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const nextIdRef = useRef(0);
+  const dragStartXRef = useRef(0);
+  const dragStartWidthRef = useRef(0);
 
   // Reset on file change
   useEffect(() => {
@@ -58,6 +60,24 @@ export default function AISidebar({ filename, patch, open, onClose }: AISidebarP
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, displayedText, loading]);
 
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    dragStartXRef.current = e.clientX;
+    dragStartWidthRef.current = sidebarWidth;
+
+    const onMouseMove = (ev: MouseEvent) => {
+      const delta = dragStartXRef.current - ev.clientX;
+      setSidebarWidth(Math.min(600, Math.max(280, dragStartWidthRef.current + delta)));
+    };
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }, [sidebarWidth]);
+
   async function handleSend() {
     if (!filename || !patch || loading || !!displayedText || !inputText.trim()) return;
     const question = inputText.trim();
@@ -86,99 +106,106 @@ export default function AISidebar({ filename, patch, open, onClose }: AISidebarP
 
   return (
     <div
-      className={`absolute right-0 top-0 bottom-0 w-[380px] bg-[#1c1e2e] border-l border-[#2a2d3e] z-10 flex flex-col transform transition-transform duration-300 ease-in-out ${
-        open ? 'translate-x-0' : 'translate-x-full'
-      }`}
+      className="fixed right-0 bottom-0 z-50 flex bg-[#1c1e2e] border-l border-[#2a2d3e] shadow-2xl"
+      style={{ top: '37px', width: sidebarWidth }}
     >
-      {/* Sidebar header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#2a2d3e] shrink-0">
-        <div className="flex items-center gap-2">
-          <span>✨</span>
-          <span className="text-sm font-semibold text-gh-textPrimary">AI Review</span>
-        </div>
-        <button
-          onClick={onClose}
-          className="text-gh-textSecondary hover:text-gh-textPrimary cursor-pointer text-lg leading-none"
-          title="Close"
-        >
-          ✕
-        </button>
-      </div>
+      {/* Drag handle */}
+      <div
+        className="w-1 shrink-0 cursor-col-resize hover:bg-gh-primary/40 transition-colors"
+        onMouseDown={handleDragStart}
+      />
 
-      {/* Filename pill */}
-      {filename && (
-        <div className="px-4 py-2 border-b border-[#2a2d3e] shrink-0">
-          <span className="text-xs text-gh-textSecondary font-mono bg-gh-bg px-2 py-0.5 rounded-full border border-gh-border truncate block max-w-full">
-            {filename}
-          </span>
+      {/* Content */}
+      <div className="flex flex-col flex-1 overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[#2a2d3e] shrink-0">
+          <div className="flex items-center gap-2">
+            <span>✨</span>
+            <span className="text-sm font-semibold text-gh-textPrimary">AI Review</span>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gh-textSecondary hover:text-gh-textPrimary cursor-pointer text-lg leading-none"
+            title="Close"
+          >
+            ✕
+          </button>
         </div>
-      )}
 
-      {/* Chat history */}
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
-        {messages.map((msg, i) =>
-          msg.role === 'user' ? (
-            <div key={msg.id} className="flex justify-end">
-              <div className="bg-gh-primary text-white text-sm px-3 py-2 rounded-lg max-w-[85%] break-words">
-                {msg.content}
-              </div>
-            </div>
-          ) : (
-            <div key={msg.id} className="flex justify-start">
-              <div className="bg-gh-bg border-l-2 border-gh-primary p-3 rounded text-sm text-gh-textPrimary whitespace-pre-wrap max-w-full break-words">
-                <div className="flex items-center gap-1 mb-1">
-                  <span>✨</span>
-                  <span className="text-xs text-gh-primary font-semibold">AI Review</span>
-                </div>
-                {msg.content}
-              </div>
-            </div>
-          )
+        {/* Filename pill */}
+        {filename && (
+          <div className="px-4 py-2 border-b border-[#2a2d3e] shrink-0">
+            <span className="text-xs text-gh-textSecondary font-mono bg-gh-bg px-2 py-0.5 rounded-full border border-gh-border truncate block max-w-full">
+              {filename}
+            </span>
+          </div>
         )}
 
-        {/* Loading / in-progress typewriter response */}
-        {(loading || displayedText) && (
-          <div className="flex justify-start">
-            <div className="bg-gh-bg border-l-2 border-gh-primary p-3 rounded text-sm text-gh-textPrimary max-w-full">
-              {loading && !displayedText ? (
-                <div className="flex items-center gap-2">
-                  <div className="animate-spin border-2 border-gh-border border-t-[#58a6ff] rounded-full w-4 h-4 shrink-0" />
-                  <span className="text-gh-textSecondary">Thinking...</span>
+        {/* Chat history */}
+        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+          {messages.map((msg) =>
+            msg.role === 'user' ? (
+              <div key={msg.id} className="flex justify-end">
+                <div className="bg-gh-primary text-white text-sm px-3 py-2 rounded-lg max-w-[85%] break-words">
+                  {msg.content}
                 </div>
-              ) : (
-                <>
+              </div>
+            ) : (
+              <div key={msg.id} className="flex justify-start">
+                <div className="bg-gh-bg border-l-2 border-gh-primary p-3 rounded text-sm text-gh-textPrimary whitespace-pre-wrap max-w-full break-words">
                   <div className="flex items-center gap-1 mb-1">
                     <span>✨</span>
                     <span className="text-xs text-gh-primary font-semibold">AI Review</span>
                   </div>
-                  <p className="whitespace-pre-wrap break-words">{displayedText}</p>
-                </>
-              )}
+                  {msg.content}
+                </div>
+              </div>
+            )
+          )}
+
+          {(loading || displayedText) && (
+            <div className="flex justify-start">
+              <div className="bg-gh-bg border-l-2 border-gh-primary p-3 rounded text-sm text-gh-textPrimary max-w-full">
+                {loading && !displayedText ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin border-2 border-gh-border border-t-[#58a6ff] rounded-full w-4 h-4 shrink-0" />
+                    <span className="text-gh-textSecondary">Thinking...</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-1 mb-1">
+                      <span>✨</span>
+                      <span className="text-xs text-gh-primary font-semibold">AI Review</span>
+                    </div>
+                    <p className="whitespace-pre-wrap break-words">{displayedText}</p>
+                  </>
+                )}
+              </div>
             </div>
+          )}
+
+          <div ref={chatEndRef} />
+        </div>
+
+        {/* Input area */}
+        <div className="border-t border-[#2a2d3e] p-3 shrink-0">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && !loading && !displayedText && handleSend()}
+              placeholder="Ask about this diff..."
+              className="flex-1 bg-gh-bg border border-gh-border rounded px-3 py-1.5 text-sm text-gh-textPrimary focus:outline-none focus:border-gh-primary min-w-0"
+            />
+            <button
+              onClick={handleSend}
+              disabled={loading || !filename || !patch}
+              className="px-3 py-1.5 text-sm bg-[#3ecf8e] text-black font-medium rounded disabled:opacity-50 cursor-pointer hover:opacity-90 shrink-0"
+            >
+              Send
+            </button>
           </div>
-        )}
-
-        <div ref={chatEndRef} />
-      </div>
-
-      {/* Input area */}
-      <div className="border-t border-[#2a2d3e] p-3 shrink-0">
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !loading && !displayedText && handleSend()}
-            placeholder="Ask about this diff..."
-            className="flex-1 bg-gh-bg border border-gh-border rounded px-3 py-1.5 text-sm text-gh-textPrimary focus:outline-none focus:border-gh-primary min-w-0"
-          />
-          <button
-            onClick={handleSend}
-            disabled={loading || !filename || !patch}
-            className="px-3 py-1.5 text-sm bg-[#3ecf8e] text-black font-medium rounded disabled:opacity-50 cursor-pointer hover:opacity-90 shrink-0"
-          >
-            Send
-          </button>
         </div>
       </div>
     </div>
