@@ -220,6 +220,14 @@ export default function HomePage() {
     }
   }
 
+  const sortedReviews = [...reviews].sort((a, b) => {
+    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+  });
+  const pinnedReviews = sortedReviews.filter((r) => r.pinned);
+  const unpinnedReviews = sortedReviews.filter((r) => !r.pinned);
+  const hasPinned = pinnedReviews.length > 0;
+
   if (!token) {
     return (
       <div style={{ minHeight: '100vh', position: 'relative', overflow: 'hidden', background: '#0d1117', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -423,20 +431,20 @@ export default function HomePage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {[...reviews]
-              .sort((a, b) => {
-                if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-                return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-              })
-              .map((r) => (
-                <ReviewCard
-                  key={r._id}
-                  review={r}
-                  currentUserId={currentUserId}
-                  onDelete={handleDelete}
-                  onPin={handlePin}
-                />
-              ))}
+            {hasPinned && (
+              <p className="text-xs text-gh-textSecondary font-medium uppercase tracking-wide pb-1">📌 Pinned</p>
+            )}
+            {pinnedReviews.map((r) => (
+              <ReviewCard key={r._id} review={r} currentUserId={currentUserId} onDelete={handleDelete} onPin={handlePin} />
+            ))}
+            {hasPinned && unpinnedReviews.length > 0 && (
+              <div className="border-t border-gh-border pt-3">
+                <p className="text-xs text-gh-textSecondary font-medium uppercase tracking-wide pb-1">All Reviews</p>
+              </div>
+            )}
+            {unpinnedReviews.map((r) => (
+              <ReviewCard key={r._id} review={r} currentUserId={currentUserId} onDelete={handleDelete} onPin={handlePin} />
+            ))}
           </div>
         )}
       </main>

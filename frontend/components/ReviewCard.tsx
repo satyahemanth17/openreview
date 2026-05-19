@@ -54,87 +54,77 @@ export default function ReviewCard({ review, currentUserId, onDelete, onPin }: R
 
   return (
     <div
-      className={`relative group transition-all duration-300 ${
+      className={`group relative bg-gh-surface border border-gh-border rounded-lg p-5 hover:border-gh-primary transition-all duration-300 min-h-[120px] ${
         deleting ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
       }`}
     >
-      {/* Pin badge */}
-      {review.pinned && (
-        <span
-          className="absolute top-2 left-2 z-10 text-xs font-bold"
-          style={{ color: '#3ecf8e' }}
-        >
-          📌
+      {/* Header row: title (left) + three-dot menu (right) */}
+      <div className="flex items-start gap-3 mb-3">
+        <h3 className="flex-1 text-gh-textPrimary font-medium leading-snug">{review.title}</h3>
+        {isOwner && (
+          <div ref={menuRef} className="relative shrink-0">
+            <button
+              className="opacity-0 group-hover:opacity-100 transition-opacity text-gh-textSecondary hover:text-gh-textPrimary bg-gh-bg hover:bg-white/5 border border-gh-border rounded px-2 py-0.5 text-sm cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenuOpen((prev) => !prev);
+              }}
+            >
+              ⋮
+            </button>
+            {menuOpen && (
+              <div className="absolute top-8 right-0 z-20 bg-gh-surface border border-gh-border rounded-md shadow-lg py-1 min-w-[120px]">
+                <button
+                  className="w-full text-left px-3 py-1.5 text-sm text-gh-textSecondary hover:text-gh-textPrimary hover:bg-white/5 cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPin(review._id);
+                    setMenuOpen(false);
+                  }}
+                >
+                  {review.pinned ? '📌 Unpin' : '📌 Pin'}
+                </button>
+                <button
+                  className="w-full text-left px-3 py-1.5 text-sm text-gh-textSecondary hover:text-gh-textPrimary hover:bg-white/5 cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowConfirm(true);
+                    setMenuOpen(false);
+                  }}
+                >
+                  🗑️ Delete
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Meta row: author avatar, username, time, file count */}
+      <div className="flex items-center gap-2 text-sm text-gh-textSecondary mb-4">
+        {review.author.avatarUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={review.author.avatarUrl} alt="" className="w-4 h-4 rounded-full" />
+        )}
+        <span>{review.author.username}</span>
+        <span>·</span>
+        <span>{timeAgo(review.createdAt)}</span>
+        <span>·</span>
+        <span>{review.files.length} files</span>
+      </div>
+
+      {/* Footer row: status badge (left) + view button (right) */}
+      <div className="flex items-center justify-between">
+        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[review.status]}`}>
+          {review.status}
         </span>
-      )}
-
-      {/* Three-dot menu button */}
-      {isOwner && (
-        <div ref={menuRef} className="absolute top-2 right-2 z-10">
-          <button
-            className="opacity-0 group-hover:opacity-100 transition-opacity text-gh-textSecondary hover:text-gh-textPrimary bg-gh-surface hover:bg-gh-bg border border-gh-border rounded px-1.5 py-0.5 text-sm cursor-pointer"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setMenuOpen((prev) => !prev);
-            }}
-          >
-            ⋮
-          </button>
-
-          {/* Dropdown menu */}
-          {menuOpen && (
-            <div className="absolute top-8 right-0 z-20 bg-gh-surface border border-gh-border rounded-md shadow-lg py-1 min-w-[120px]">
-              <button
-                className="w-full text-left px-3 py-1.5 text-sm text-gh-textSecondary hover:text-gh-textPrimary hover:bg-white/5 cursor-pointer"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onPin(review._id);
-                  setMenuOpen(false);
-                }}
-              >
-                {review.pinned ? '📌 Unpin' : '📌 Pin'}
-              </button>
-              <button
-                className="w-full text-left px-3 py-1.5 text-sm text-gh-textSecondary hover:text-gh-textPrimary hover:bg-white/5 cursor-pointer"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setShowConfirm(true);
-                  setMenuOpen(false);
-                }}
-              >
-                🗑️ Delete
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Card link */}
-      <Link
-        href={`/review/${review._id}`}
-        className="block bg-gh-surface border border-gh-border rounded-lg p-4 hover:border-gh-primary transition-colors"
-      >
-        <div className="flex items-start justify-between gap-3">
-          <h3 className="text-gh-textPrimary font-medium truncate">{review.title}</h3>
-          <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[review.status]}`}>
-            {review.status}
-          </span>
-        </div>
-        <div className="mt-2 flex items-center gap-2 text-sm text-gh-textSecondary">
-          {review.author.avatarUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={review.author.avatarUrl} alt="" className="w-4 h-4 rounded-full" />
-          )}
-          <span>{review.author.username}</span>
-          <span>·</span>
-          <span>{timeAgo(review.createdAt)}</span>
-          <span>·</span>
-          <span>{review.files.length} files</span>
-        </div>
-      </Link>
+        <Link
+          href={`/review/${review._id}`}
+          className="text-xs text-gh-primary hover:text-gh-primary/80 hover:underline transition-colors"
+        >
+          View →
+        </Link>
+      </div>
 
       {/* Delete confirmation overlay */}
       {showConfirm && (
