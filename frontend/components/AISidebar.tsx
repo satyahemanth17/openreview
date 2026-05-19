@@ -20,7 +20,7 @@ export default function AISidebar({ filename, patch, onClose }: AISidebarProps) 
   const [loading, setLoading] = useState(false);
   const [pendingText, setPendingText] = useState('');
   const [displayedText, setDisplayedText] = useState('');
-  const [sidebarWidth, setSidebarWidth] = useState(380);
+  const [sidebarWidth, setSidebarWidth] = useState(320);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const nextIdRef = useRef(0);
   const dragStartXRef = useRef(0);
@@ -67,7 +67,7 @@ export default function AISidebar({ filename, patch, onClose }: AISidebarProps) 
 
     const onMouseMove = (ev: MouseEvent) => {
       const delta = dragStartXRef.current - ev.clientX;
-      setSidebarWidth(Math.min(600, Math.max(280, dragStartWidthRef.current + delta)));
+      setSidebarWidth(Math.min(480, Math.max(260, dragStartWidthRef.current + delta)));
     };
     const onMouseUp = () => {
       document.removeEventListener('mousemove', onMouseMove);
