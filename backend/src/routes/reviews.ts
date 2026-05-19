@@ -139,7 +139,8 @@ router.patch('/:id/pin', async (req: Request, res: Response): Promise<void> => {
     review.pinned = !review.pinned;
     await review.save();
 
-    res.json(review);
+    const populated = await review.populate('author', 'username avatarUrl');
+    res.json(populated);
   } catch (error) {
     res.status(500).json({ error: 'Failed to toggle pin' });
   }
