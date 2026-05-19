@@ -11,6 +11,7 @@ Real-time collaborative code review platform. Import any GitHub pull request and
 - **Real-time collaboration** — comments appear instantly in all open tabs via WebSockets; active reviewer avatars shown in the header
 - **Replies & reactions** — thread discussions with replies and emoji reactions (👍 👎 ❤️ 🚀 👀)
 - **Resolve threads** — mark comment threads as resolved
+- **Pin reviews** — pin important reviews to the top of the dashboard; pinned/all sections shown automatically
 - **AI Review sidebar** — ask Claude about any file diff; resizable overlay panel (✨ Ask AI)
 
 ## Architecture
