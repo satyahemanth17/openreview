@@ -6,11 +6,12 @@ Real-time collaborative code review platform. Import any GitHub pull request and
 
 - **GitHub OAuth login** — authenticate with your GitHub account
 - **PR import** — import any public GitHub pull request by owner/repo/number
-- **Monaco Editor** — VS Code-grade diff viewer for changed files
-- **Real-time collaboration** — comments appear instantly in all open tabs via WebSockets
-- **Inline comments** — attach comments to specific files
+- **Monaco Editor** — VS Code-grade diff viewer with a custom dark theme (green/red diff colors)
+- **Inline line comments** — select a line range in the diff and attach a comment to it; click a comment to jump back to the exact lines
+- **Real-time collaboration** — comments appear instantly in all open tabs via WebSockets; active reviewer avatars shown in the header
 - **Replies & reactions** — thread discussions with replies and emoji reactions (👍 👎 ❤️ 🚀 👀)
 - **Resolve threads** — mark comment threads as resolved
+- **AI Review sidebar** — ask Claude about any file diff; resizable overlay panel (✨ Ask AI)
 
 ## Architecture
 
@@ -18,13 +19,13 @@ Real-time collaborative code review platform. Import any GitHub pull request and
 ┌─────────────────────────────────────────────────────────────┐
 │  Browser (Next.js 16 · TypeScript · Tailwind · Monaco)      │
 │                                                             │
-│  ┌──────────┐  ┌────────────────┐  ┌───────────────────┐   │
-│  │ /         │  │ /review/[id]   │  │ /auth/callback    │   │
-│  │ Home      │  │ Monaco Editor  │  │ JWT storage       │   │
-│  │ PR import │  │ 3-panel layout │  └───────────────────┘   │
-│  └──────────┘  └────────────────┘                           │
-│       │  REST (axios + JWT)          │  Socket.io           │
-└───────┼─────────────────────────────┼──────────────────────┘
+│  ┌──────────┐  ┌────────────────────────────────────────┐   │
+│  │ /         │  │ /review/[id]                           │   │
+│  │ Home      │  │ File tree | Monaco diff | Comments     │   │
+│  │ PR import │  │           AI sidebar (overlay)         │   │
+│  └──────────┘  └────────────────────────────────────────┘   │
+│       │  REST (axios + JWT)          │  Socket.io            │
+└───────┼─────────────────────────────┼───────────────────────┘
         │                             │
 ┌───────▼─────────────────────────────▼──────────────────────┐
 │  Express · TypeScript · Socket.io (port 5001)              │
@@ -34,6 +35,8 @@ Real-time collaborative code review platform. Import any GitHub pull request and
 │  /api/reviews      CRUD          comment:new                │
 │  /api/comments     Comments      comment:reply              │
 │  /api/github/*     GH API proxy  comment:resolved           │
+│  /api/ai/review    AI review     comment:reaction           │
+│                                  comment:deleted            │
 │                                  reviewer:joined/left       │
 └───────────────────────────────────────┬─────────────────────┘
                                         │ Mongoose ODM
@@ -59,7 +62,7 @@ Real-time collaborative code review platform. Import any GitHub pull request and
 | Backend | Express + TypeScript |
 | Database | MongoDB 7 + Mongoose ODM |
 | Auth | GitHub OAuth 2.0 + JWT (7-day) |
-| External API | GitHub REST API (PR diffs) |
+| External API | GitHub REST API (PR diffs), OpenAI API (AI review) |
 | Container | Docker + Docker Compose |
 
 ## Quick Start
@@ -68,61 +71,63 @@ Real-time collaborative code review platform. Import any GitHub pull request and
 
 **Prerequisites:** Node.js 20, MongoDB running on port 27017, GitHub OAuth app
 
-1. Clone and set up environment:
+1. Clone the repo:
    ```bash
    git clone https://github.com/satyahemanth17/openreview
    cd openreview
    ```
-   Create `.env` in the project root with your secrets (see Environment Variables below).
 
-2. Start the backend:
+2. Create `backend/.env` with your secrets (see Environment Variables below).
+
+3. Start the backend:
    ```bash
    cd backend
    npm install
    npm run dev         # ts-node-dev, port 5001
    ```
 
-3. Start the frontend:
+4. Start the frontend:
    ```bash
    cd frontend
    npm install
-   npm run dev         # Next.js, port 3000
+   npm run dev         # Next.js, port 3001
    ```
 
-4. Open [http://localhost:3000](http://localhost:3000) and click **Login with GitHub**.
+5. Open [http://localhost:3001](http://localhost:3001) and click **Login with GitHub**.
 
 ### Docker
 
 ```bash
-# Create .env with your secrets first, then:
+# Create backend/.env with your secrets first, then:
 docker compose up --build
 ```
 
-Services start on: MongoDB → 27017, backend → 5001, frontend → 3000.
+Services start on: MongoDB → 27017, backend → 5001, frontend → 3001.
 
 ## Environment Variables
 
-### Backend (`.env` in project root)
+### Backend (`backend/.env`)
+
 | Variable | Description |
 |----------|-------------|
-| `PORT` | Backend port (default 5001) |
+| `PORT` | Backend port (default `5001`) |
 | `MONGODB_URI` | MongoDB connection string |
 | `JWT_SECRET` | Secret for signing JWTs |
 | `GITHUB_CLIENT_ID` | GitHub OAuth app client ID |
 | `GITHUB_CLIENT_SECRET` | GitHub OAuth app client secret |
+| `GITHUB_CALLBACK_URL` | OAuth callback (`http://localhost:5001/api/auth/github/callback`) |
+| `FRONTEND_URL` | Frontend origin for CORS (`http://localhost:3001`) |
+| `OPENAI_API_KEY` | OpenAI API key for AI review feature |
+| `GITHUB_TOKEN` | Optional PAT — used as fallback when user has no stored OAuth token |
 
-### Frontend (`frontend/.env.local`)
-| Variable | Description |
-|----------|-------------|
-| `NEXT_PUBLIC_API_URL` | Backend URL (default `http://localhost:5001`) |
-| `NEXT_PUBLIC_SOCKET_URL` | Socket.io server URL (same as API) |
+See `backend/.env.example` for a template.
 
 ## GitHub OAuth Setup
 
 1. Go to GitHub → Settings → Developer settings → OAuth Apps → New OAuth App
-2. Set **Homepage URL** to `http://localhost:3000`
+2. Set **Homepage URL** to `http://localhost:3001`
 3. Set **Authorization callback URL** to `http://localhost:5001/api/auth/github/callback`
-4. Copy **Client ID** and **Client Secret** into your `.env`
+4. Copy **Client ID** and **Client Secret** into `backend/.env`
 
 ## MongoDB Schema
 
@@ -130,8 +135,8 @@ Services start on: MongoDB → 27017, backend → 5001, frontend → 3000.
 User       { githubId, username, email, avatarUrl, accessToken }
 Review     { title, author→User, status, files[], reviewers[]→User }
   File     { filename, patch, additions, deletions }
-Comment    { reviewId→Review, author→User, filename?, line?, body,
-             resolved, replies[], reactions[] }
+Comment    { reviewId→Review, author→User, filename?, lineStart?, lineEnd?,
+             pane?, body, resolved, replies[], reactions[] }
   Reply    { author→User, body, createdAt }
   Reaction { userId→User, emoji }
 ```
@@ -146,7 +151,9 @@ Client → Server          Server → Client
 review:join(reviewId)    comment:new(comment)
 review:leave(reviewId)   comment:reply(comment)
 comment:typing(data)     comment:resolved(comment)
-cursor:move(data)        reviewer:joined({ username })
+cursor:move(data)        comment:reaction(comment)
+                         comment:deleted({ commentId })
+                         reviewer:joined({ username })
                          reviewer:left({ username })
 ```
 
