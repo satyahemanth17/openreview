@@ -1,8 +1,12 @@
 import { Router, Request, Response } from 'express';
+import { Server } from 'socket.io';
 import { authenticateToken } from '../middleware/auth';
 import { Review } from '../models/Review';
 
 const router = Router();
+
+let io: Server | null = null;
+export function setIO(ioInstance: Server): void { io = ioInstance; }
 
 // All routes require auth
 router.use(authenticateToken);
@@ -115,9 +119,29 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
     }
 
     await review.deleteOne();
+    io?.emit('review:deleted', { reviewId: req.params.id });
     res.json({ message: 'Review deleted' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete review' });
+  }
+});
+
+// PATCH /:id/pin — toggle pinned state
+router.patch('/:id/pin', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const review = await Review.findById(req.params.id);
+
+    if (!review) {
+      res.status(404).json({ error: 'Review not found' });
+      return;
+    }
+
+    review.pinned = !review.pinned;
+    await review.save();
+
+    res.json(review);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to toggle pin' });
   }
 });
 

@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import ReviewCard from '../components/ReviewCard';
-import { Review, ReviewFile, GithubFile, getReviews, createReview, getPRDetails, getPRFiles } from '../lib/api';
-import { resetSocket } from '../lib/socket';
+import { Review, ReviewFile, GithubFile, getReviews, createReview, deleteReview, pinReview, getPRDetails, getPRFiles } from '../lib/api';
+import { getSocket, resetSocket } from '../lib/socket';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api').replace(/\/api$/, '');
 
@@ -53,6 +53,7 @@ type Particle = {
 export default function HomePage() {
   const [token, setToken] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [showImport, setShowImport] = useState(false);
@@ -70,6 +71,7 @@ export default function HomePage() {
       try {
         const payload = JSON.parse(atob(t.split('.')[1]));
         setUsername(payload.username ?? null);
+        setCurrentUserId(payload._id ?? payload.id ?? null);
       } catch {}
       getReviews()
         .then(setReviews)
@@ -148,6 +150,20 @@ export default function HomePage() {
     card.style.transform = 'perspective(1000px) rotateY(45deg) scale(1)';
   }, []);
 
+  const handleDelete = useCallback((reviewId: string) => {
+    deleteReview(reviewId).catch((err) => console.error('Failed to delete review:', err));
+    setReviews((prev) => prev.filter((r) => r._id !== reviewId));
+  }, []);
+
+  const handlePin = useCallback(async (reviewId: string) => {
+    try {
+      const updated = await pinReview(reviewId);
+      setReviews((prev) => prev.map((r) => (r._id === reviewId ? updated : r)));
+    } catch (err) {
+      console.error('Failed to pin review:', err);
+    }
+  }, []);
+
   // Add/remove tilt listeners only when on the login page
   useEffect(() => {
     if (token) return;
@@ -158,6 +174,15 @@ export default function HomePage() {
       window.removeEventListener('mouseleave', handleMouseLeave);
     };
   }, [token, handleMouseMove, handleMouseLeave]);
+
+  useEffect(() => {
+    if (!token) return;
+    const socket = getSocket();
+    const onDeleted = ({ reviewId }: { reviewId: string }) =>
+      setReviews((prev) => prev.filter((r) => r._id !== reviewId));
+    socket.on('review:deleted', onDeleted);
+    return () => { socket.off('review:deleted', onDeleted); };
+  }, [token]);
 
   async function handleImport() {
     const { owner, repo, pr } = importForm;
@@ -398,9 +423,20 @@ export default function HomePage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {reviews.map((r) => (
-              <ReviewCard key={r._id} review={r} />
-            ))}
+            {[...reviews]
+              .sort((a, b) => {
+                if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+                return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+              })
+              .map((r) => (
+                <ReviewCard
+                  key={r._id}
+                  review={r}
+                  currentUserId={currentUserId}
+                  onDelete={handleDelete}
+                  onPin={handlePin}
+                />
+              ))}
           </div>
         )}
       </main>

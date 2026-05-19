@@ -10,7 +10,8 @@ import commentsRouter from './routes/comments';
 import githubRouter from './routes/github';
 import aiRouter from './routes/ai';
 import { registerSocketHandlers } from './socket/handlers';
-import { setIO } from './routes/comments';
+import { setIO as setCommentsIO } from './routes/comments';
+import { setIO as setReviewsIO } from './routes/reviews';
 
 const app = express();
 const httpServer = createServer(app);
@@ -44,7 +45,8 @@ app.get('/health', (_req, res) => {
 
 // Register socket handlers and pass io to comments route
 registerSocketHandlers(io);
-setIO(io);
+setCommentsIO(io);
+setReviewsIO(io);
 
 const PORT = process.env.PORT || 5001;
 

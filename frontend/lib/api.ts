@@ -59,6 +59,8 @@ export interface Review {
   files: ReviewFile[];
   reviewers: Author[];
   createdAt: string;
+  updatedAt: string;
+  pinned: boolean;
 }
 
 export interface GithubFile {
@@ -85,6 +87,10 @@ export const addReaction = (commentId: string, emoji: string) =>
   api.post<Comment>(`/comments/${commentId}/reactions`, { emoji }).then((r) => r.data);
 export const deleteComment = (commentId: string) =>
   api.delete(`/comments/${commentId}`);
+export const deleteReview = (reviewId: string) =>
+  api.delete(`/reviews/${reviewId}`);
+export const pinReview = (reviewId: string) =>
+  api.patch<Review>(`/reviews/${reviewId}/pin`).then((r) => r.data);
 export const getPRDetails = (owner: string, repo: string, number: string) =>
   api.get<{ title: string; number: number }>(`/github/repos/${owner}/${repo}/pulls/${number}`).then((r) => r.data);
 export const getPRFiles = (owner: string, repo: string, number: string) =>

@@ -18,13 +18,14 @@ export interface IReview extends Document {
   repoName?: string;
   files: IReviewFile[];
   reviewers: Types.ObjectId[];
+  pinned: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
 
 const ReviewFileSchema = new Schema<IReviewFile>(
   {
-    filename: { type: String },
+    filename: { type: String, required: true },
     patch: { type: String },
     additions: { type: Number },
     deletions: { type: Number },
@@ -48,6 +49,7 @@ const ReviewSchema = new Schema<IReview>(
     repoName: { type: String },
     files: { type: [ReviewFileSchema], default: [] },
     reviewers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    pinned: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
